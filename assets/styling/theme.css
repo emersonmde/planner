@@ -1,0 +1,122 @@
+/* ===== QUARTERLY PLANNER - DESIGN TOKENS ===== */
+/* Source: docs/ui-design.md section 12.1 */
+
+:root {
+  /* ===== COLORS - BACKGROUNDS ===== */
+  --bg-primary: #1c1c1e;
+  --bg-secondary: #2c2c2e;
+  --bg-tertiary: #3a3a3c;
+  --bg-overlay: #48484a;
+
+  /* ===== COLORS - BORDERS ===== */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-emphasis: rgba(255, 255, 255, 0.18);
+
+  /* ===== COLORS - TEXT ===== */
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.70);
+  --text-tertiary: rgba(255, 255, 255, 0.50);
+  --text-disabled: rgba(255, 255, 255, 0.30);
+
+  /* ===== COLORS - SEMANTIC ===== */
+  /* Primary Actions (Apple Blue family) */
+  --primary-50: #0A84FF;
+  --primary-60: #0A7AEF;
+  --primary-70: #0970DF;
+
+  /* Success States (Vibrant Green) */
+  --success-50: #32D74B;
+  --success-60: #2DC945;
+  --success-bg: rgba(50, 215, 75, 0.12);
+
+  /* Warning States (Punchy Orange) */
+  --warning-50: #FF9F0A;
+  --warning-60: #EF9500;
+  --warning-bg: rgba(255, 159, 10, 0.12);
+
+  /* Error States (Vivid Red) */
+  --error-50: #FF453A;
+  --error-60: #EF3A30;
+  --error-bg: rgba(255, 69, 58, 0.12);
+
+  /* Oncall Indicator (Purple) */
+  --oncall-50: #BF5AF2;
+  --oncall-60: #B550E2;
+  --oncall-bg: rgba(191, 90, 242, 0.12);
+
+  /* Unallocated State (Muted attention) */
+  --unallocated-50: #FF6B6B;
+  --unallocated-bg: rgba(255, 107, 107, 0.10);
+
+  /* ===== COLORS - PROJECT PALETTE ===== */
+  --project-blue: #64D2FF;
+  --project-green: #63E6BE;
+  --project-yellow: #FFD43B;
+  --project-orange: #FFA94D;
+  --project-red: #FF8787;
+  --project-purple: #CC5DE8;
+  --project-pink: #F783AC;
+  --project-teal: #4FD1C5;
+  --project-indigo: #748FFC;
+
+  /* ===== SPACING ===== */
+  /* 8px Base Unit - All spacing uses multiples of 4px or 8px */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* ===== TYPOGRAPHY ===== */
+  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Consolas', monospace;
+
+  --font-size-display: 28px;
+  --font-size-h1: 20px;
+  --font-size-h2: 16px;
+  --font-size-body: 14px;
+  --font-size-caption: 12px;
+  --font-size-small: 11px;
+
+  /* ===== TRANSITIONS ===== */
+  --transition-quick: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===== SHADOWS ===== */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+
+  /* ===== BORDER RADIUS ===== */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ===== GRID ===== */
+  --grid-cell-width: 140px;
+  --grid-cell-height: 40px;
+  --grid-header-height: 48px;
+}
+
+/* ===== RESET & BASE ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  overflow-x: hidden;
+}

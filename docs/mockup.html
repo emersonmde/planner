@@ -1,0 +1,1757 @@
+ */
+             --border-subtle: rgba(255, 255, 255, 0.08);
+             --border-default: rgba(255, 255, 255, 0.12);
+             --border-emphasis: rgba(255, 255, 255, 0.18);
+             
+             /* Colors - Text */
+             --text-primary: rgba(255, 255, 255, 0.95);
+             --text-secondary: rgba(255, 255, 255, 0.70);
+             --text-tertiary: rgba(255, 255, 255, 0.50);
+             --text-disabled: rgba(255, 255, 255, 0.30);
+             
+             /* Colors - Semantic */
+             -<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quarterly Planner - Reference Implementation</title>
+    <style>
+        /* ===== DESIGN TOKENS ===== */
+        :root {
+            /* Colors - Backgrounds */
+            --bg-primary: #1c1c1e;
+            --bg-secondary: #2c2c2e;
+            --bg-tertiary: #3a3a3c;
+            --bg-overlay: #48484a;
+            
+            /* Colors - Borders-primary-50: #0A84FF;
+            --primary-60: #0A7AEF;
+            --primary-70: #0970DF;
+            
+            --success-50: #32D74B;
+            --success-60: #2DC945;
+            --success-bg: rgba(50, 215, 75, 0.12);
+            
+            --warning-50: #FF9F0A;
+            --warning-60: #EF9500;
+            --warning-bg: rgba(255, 159, 10, 0.12);
+            
+            --error-50: #FF453A;
+            --error-60: #EF3A30;
+            --error-bg: rgba(255, 69, 58, 0.12);
+            
+            --oncall-50: #BF5AF2;
+            --oncall-60: #B550E2;
+            --oncall-bg: rgba(191, 90, 242, 0.12);
+            
+            --unallocated-50: #FF6B6B;
+            --unallocated-bg: rgba(255, 107, 107, 0.10);
+            
+            /* Colors - Projects */
+            --project-blue: #64D2FF;
+            --project-green: #63E6BE;
+            --project-yellow: #FFD43B;
+            --project-orange: #FFA94D;
+            --project-red: #FF8787;
+            --project-purple: #CC5DE8;
+            --project-pink: #F783AC;
+            --project-teal: #4FD1C5;
+            --project-indigo: #748FFC;
+            
+            /* Spacing */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-2xl: 48px;
+            
+            /* Typography */
+            --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            --font-mono: 'SF Mono', 'Consolas', monospace;
+            
+            --font-size-display: 28px;
+            --font-size-h1: 20px;
+            --font-size-h2: 16px;
+            --font-size-body: 14px;
+            --font-size-caption: 12px;
+            --font-size-small: 11px;
+            
+            /* Transitions */
+            --transition-quick: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+            
+            /* Border Radius */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            --radius-full: 9999px;
+            
+            /* Grid */
+            --grid-cell-width: 140px;
+            --grid-cell-height: 40px;
+            --grid-header-height: 48px;
+        }
+
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            font-size: var(--font-size-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        /* ===== LAYOUT ===== */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ===== TOP NAVIGATION ===== */
+        .top-nav {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-default);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--space-lg);
+            gap: var(--space-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .app-title {
+            font-size: var(--font-size-h2);
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .quarter-selector {
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-body);
+            cursor: pointer;
+            transition: all var(--transition-quick);
+        }
+
+        .quarter-selector:hover {
+            background: var(--bg-overlay);
+            border-color: var(--border-emphasis);
+        }
+
+        /* View Tabs */
+        .view-tabs {
+            display: flex;
+            gap: var(--space-sm);
+            margin-left: var(--space-lg);
+        }
+
+        .view-tab {
+            padding: var(--space-sm) var(--space-md);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-size: var(--font-size-body);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-quick);
+        }
+
+        .view-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .view-tab.active {
+            color: var(--primary-50);
+            border-bottom-color: var(--primary-50);
+        }
+
+        /* Capacity Indicator */
+        .capacity-indicator {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .capacity-text {
+            font-family: var(--font-mono);
+            font-size: var(--font-size-caption);
+            color: var(--text-secondary);
+        }
+
+        .capacity-bar {
+            width: 120px;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .capacity-bar-fill {
+            height: 100%;
+            background: var(--success-50);
+            transition: width var(--transition-base);
+        }
+
+        .capacity-bar-fill.warning {
+            background: var(--warning-50);
+        }
+
+        .capacity-bar-fill.error {
+            background: var(--error-50);
+        }
+
+        /* File Menu */
+        .file-menu-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-quick);
+        }
+
+        .file-menu-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            flex: 1;
+            overflow: auto;
+            padding: var(--space-lg);
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+            height: 36px;
+            padding: 0 var(--space-md);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-body);
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all var(--transition-quick);
+        }
+
+        .btn-primary {
+            background: var(--primary-50);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-60);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:active {
+            background: var(--primary-70);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-default);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-overlay);
+            border-color: var(--border-emphasis);
+        }
+
+        /* ===== BADGES ===== */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            height: 22px;
+            padding: 4px var(--space-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-caption);
+            font-family: var(--font-mono);
+            font-weight: 400;
+        }
+
+        .status-badge.success {
+            background: var(--success-bg);
+            color: var(--success-50);
+        }
+
+        .status-badge.warning {
+            background: var(--warning-bg);
+            color: var(--warning-50);
+        }
+
+        .status-badge.error {
+            background: var(--error-bg);
+            color: var(--error-50);
+        }
+
+        .status-icon {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* ===== ROADMAP VIEW ===== */
+        .roadmap-view {
+            display: none;
+        }
+
+        .roadmap-view.active {
+            display: block;
+        }
+
+        .view-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-lg);
+        }
+
+        .view-title {
+            font-size: var(--font-size-h1);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .search-input {
+            width: 300px;
+            height: 36px;
+            padding: 0 var(--space-md);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-body);
+            transition: all var(--transition-quick);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-50);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* Data Table */
+        .data-table {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 300px 100px 100px 100px 120px 120px 120px 120px 120px 1fr;
+            background: var(--bg-tertiary);
+            padding: var(--space-md);
+            gap: var(--space-md);
+        }
+
+        .table-header-cell {
+            font-size: var(--font-size-caption);
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 300px 100px 100px 100px 120px 120px 120px 120px 120px 1fr;
+            padding: var(--space-md);
+            gap: var(--space-md);
+            border-top: 1px solid var(--border-subtle);
+            transition: background var(--transition-quick);
+        }
+
+        .table-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .table-cell {
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+        }
+
+        .table-cell.secondary {
+            color: var(--text-secondary);
+        }
+
+        .table-cell.monospace {
+            font-family: var(--font-mono);
+        }
+
+        .table-cell.emphasis {
+            font-weight: 500;
+        }
+
+        .project-name {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .project-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Quarter Summary */
+        .quarter-summary {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+        }
+
+        .summary-title {
+            font-size: var(--font-size-h2);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+        }
+
+        .summary-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xs);
+        }
+
+        .metric-label {
+            font-size: var(--font-size-caption);
+            color: var(--text-secondary);
+        }
+
+        .metric-value {
+            font-size: var(--font-size-h1);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        /* ===== ALLOCATION GRID ===== */
+        .allocation-view {
+            display: none;
+        }
+
+        .allocation-view.active {
+            display: block;
+        }
+
+        .grid-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-lg);
+        }
+
+        .paintbrush-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-quick);
+        }
+
+        .paintbrush-toggle:hover {
+            background: var(--bg-overlay);
+        }
+
+        .paintbrush-toggle.active {
+            background: var(--primary-50);
+            border-color: var(--primary-50);
+            color: white;
+        }
+
+        .toggle-label {
+            font-size: var(--font-size-body);
+            font-weight: 500;
+        }
+
+        .project-selector {
+            width: 240px;
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--font-size-body);
+            cursor: pointer;
+        }
+
+        /* Grid */
+        .allocation-grid {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            overflow-x: auto;
+            padding: var(--space-md);
+        }
+
+        .grid-container {
+            display: grid;
+            gap: var(--space-sm);
+            min-width: fit-content;
+        }
+
+        .grid-header-row {
+            display: grid;
+            grid-template-columns: 60px 120px repeat(6, var(--grid-cell-width));
+            gap: var(--space-sm);
+            margin-bottom: var(--space-sm);
+        }
+
+        .grid-header-cell {
+            height: var(--grid-header-height);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-sm);
+            gap: var(--space-xs);
+        }
+
+        .engineer-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--bg-overlay);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-small);
+            color: var(--text-secondary);
+        }
+
+        .capacity-text-small {
+            font-family: var(--font-mono);
+            font-size: var(--font-size-small);
+            color: var(--success-50);
+        }
+
+        .grid-row {
+            display: grid;
+            grid-template-columns: 60px 120px repeat(6, var(--grid-cell-width));
+            gap: var(--space-sm);
+        }
+
+        .grid-row.sprint-separator {
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 2px dashed var(--border-default);
+        }
+
+        .sprint-cell {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-h1);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .week-cell {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-sm);
+            gap: 2px;
+        }
+
+        .week-date {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: var(--font-size-body);
+        }
+
+        .week-day {
+            font-size: var(--font-size-small);
+            color: var(--text-tertiary);
+        }
+
+        .week-number {
+            font-size: var(--font-size-small);
+            color: var(--text-tertiary);
+        }
+
+        /* Grid Cells */
+        .grid-cell {
+            width: var(--grid-cell-width);
+            height: var(--grid-cell-height);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-body);
+            color: var(--text-primary);
+            transition: all var(--transition-quick);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grid-cell:hover {
+            border-color: var(--border-emphasis);
+        }
+
+        /* Empty Cell */
+        .grid-cell.empty {
+            border-style: dashed;
+            color: var(--text-tertiary);
+        }
+
+        .grid-cell.empty::before {
+            content: '+';
+            font-size: 20px;
+            opacity: 0.3;
+        }
+
+        /* Unallocated Cell */
+        .grid-cell.unallocated {
+            background: var(--unallocated-bg);
+            border-color: var(--unallocated-50);
+            border-style: dashed;
+        }
+
+        .grid-cell.unallocated::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            right: 10%;
+            height: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                var(--unallocated-50) 0px,
+                var(--unallocated-50) 4px,
+                transparent 4px,
+                transparent 8px
+            );
+        }
+
+        /* Allocated Cell */
+        .grid-cell.allocated {
+            border-style: solid;
+            padding: var(--space-xs);
+        }
+
+        .grid-cell.allocated .cell-content {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .project-text {
+            font-size: var(--font-size-caption);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .allocation-badge {
+            font-size: var(--font-size-small);
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+        }
+
+        /* Project Color Variants */
+        .grid-cell.project-blue {
+            background: rgba(100, 210, 255, 0.15);
+            border-color: rgba(100, 210, 255, 0.4);
+        }
+
+        .grid-cell.project-green {
+            background: rgba(99, 230, 190, 0.15);
+            border-color: rgba(99, 230, 190, 0.4);
+        }
+
+        .grid-cell.project-yellow {
+            background: rgba(255, 212, 59, 0.15);
+            border-color: rgba(255, 212, 59, 0.4);
+        }
+
+        .grid-cell.project-orange {
+            background: rgba(255, 169, 77, 0.15);
+            border-color: rgba(255, 169, 77, 0.4);
+        }
+
+        .grid-cell.project-purple {
+            background: rgba(204, 93, 232, 0.15);
+            border-color: rgba(204, 93, 232, 0.4);
+        }
+
+        /* Oncall Cell */
+        .grid-cell.oncall {
+            background: var(--oncall-bg);
+            border: 2px solid var(--oncall-50);
+        }
+
+        .grid-cell.oncall::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(191, 90, 242, 0.05) 10px,
+                rgba(191, 90, 242, 0.05) 20px
+            );
+        }
+
+        .oncall-content {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            z-index: 1;
+        }
+
+        .oncall-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--oncall-50);
+        }
+
+        .oncall-text {
+            font-weight: 600;
+            color: var(--oncall-50);
+        }
+
+        /* Split Allocation Cell */
+        .grid-cell.split {
+            padding: 0;
+            flex-direction: column;
+        }
+
+        .split-section {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-xs);
+            position: relative;
+        }
+
+        .split-section:first-child {
+            border-bottom: 1px solid var(--border-default);
+        }
+
+        .split-text {
+            font-size: var(--font-size-small);
+            font-weight: 500;
+        }
+
+        .split-percentage {
+            font-size: 10px;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+        }
+
+        /* Before Start Date */
+        .grid-cell.before-start {
+            opacity: 0.6;
+        }
+
+        .grid-cell.before-start::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 3px,
+                var(--border-subtle) 3px,
+                var(--border-subtle) 4px
+            );
+            pointer-events: none;
+        }
+
+        .warning-icon {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 12px;
+            height: 12px;
+            color: var(--warning-50);
+            z-index: 1;
+        }
+
+        /* ===== TECHNICAL PROJECTS VIEW ===== */
+        .technical-view {
+            display: none;
+        }
+
+        .technical-view.active {
+            display: flex;
+            gap: 0;
+        }
+
+        .side-panel {
+            width: 320px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-default);
+            padding: var(--space-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-lg);
+        }
+
+        .side-panel-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        .section-title {
+            font-size: var(--font-size-caption);
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm);
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: background var(--transition-quick);
+        }
+
+        .filter-option:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .checkbox {
+            width: 16px;
+            height: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-default);
+            background: var(--bg-tertiary);
+        }
+
+        .checkbox.checked {
+            background: var(--primary-50);
+            border-color: var(--primary-50);
+        }
+
+        .technical-content {
+            flex: 1;
+            padding: var(--space-lg);
+            overflow: auto;
+        }
+
+        /* ===== TOOLTIP ===== */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-overlay);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-emphasis);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: none;
+            max-width: 280px;
+        }
+
+        .tooltip.visible {
+            display: block;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .tooltip-subtitle {
+            font-size: var(--font-size-caption);
+            color: var(--primary-50);
+            margin-bottom: var(--space-sm);
+        }
+
+        .tooltip-divider {
+            height: 1px;
+            background: var(--border-subtle);
+            margin: var(--space-sm) 0;
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: var(--font-size-caption);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .tooltip-hint {
+            font-size: var(--font-size-small);
+            color: var(--text-tertiary);
+            margin-top: var(--space-sm);
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .flex-col {
+            flex-direction: column;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-sm {
+            gap: var(--space-sm);
+        }
+
+        .gap-md {
+            gap: var(--space-md);
+        }
+
+        .gap-lg {
+            gap: var(--space-lg);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- TOP NAVIGATION -->
+        <nav class="top-nav">
+            <div class="app-title">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="14" height="14" rx="2"/>
+                    <line x1="3" y1="8" x2="17" y2="8"/>
+                    <line x1="8" y1="3" x2="8" y2="17"/>
+                </svg>
+                Quarterly Planner
+            </div>
+            
+            <select class="quarter-selector">
+                <option>Q1 2025</option>
+                <option>Q2 2025</option>
+                <option>Q3 2025</option>
+                <option>Q4 2025</option>
+            </select>
+            
+            <div class="view-tabs">
+                <button class="view-tab" data-view="roadmap">Roadmap</button>
+                <button class="view-tab" data-view="technical">Technical</button>
+                <button class="view-tab active" data-view="allocation">Allocation</button>
+            </div>
+            
+            <div class="capacity-indicator">
+                <span class="capacity-text">67.5 / 78 weeks</span>
+                <div class="capacity-bar">
+                    <div class="capacity-bar-fill success" style="width: 87%"></div>
+                </div>
+            </div>
+            
+            <button class="file-menu-btn">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="17" y2="6"/>
+                    <line x1="3" y1="10" x2="17" y2="10"/>
+                    <line x1="3" y1="14" x2="17" y2="14"/>
+                </svg>
+            </button>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- ROADMAP VIEW -->
+            <div class="roadmap-view" id="roadmap-view">
+                <div class="view-header">
+                    <h1 class="view-title">Roadmap Projects</h1>
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Search projects...">
+                        <button class="btn btn-primary">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="8" y1="3" x2="8" y2="13"/>
+                                <line x1="3" y1="8" x2="13" y2="8"/>
+                            </svg>
+                            Add Roadmap Project
+                        </button>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <div class="table-header-cell">Project Name</div>
+                        <div class="table-header-cell">Eng Est.</div>
+                        <div class="table-header-cell">Sci Est.</div>
+                        <div class="table-header-cell">Total Est.</div>
+                        <div class="table-header-cell">Eng Alloc.</div>
+                        <div class="table-header-cell">Sci Alloc.</div>
+                        <div class="table-header-cell">Total Alloc.</div>
+                        <div class="table-header-cell">Start Date</div>
+                        <div class="table-header-cell">Launch Date</div>
+                        <div class="table-header-cell">Notes</div>
+                    </div>
+
+                    <div class="table-row">
+                        <div class="table-cell emphasis">
+                            <div class="project-name">
+                                <span class="project-dot" style="background: var(--project-blue)"></span>
+                                Q1 Platform Roadmap
+                            </div>
+                        </div>
+                        <div class="table-cell monospace secondary">24</div>
+                        <div class="table-cell monospace secondary">8</div>
+                        <div class="table-cell monospace emphasis">32</div>
+                        <div class="table-cell">
+                            <span class="status-badge error">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="6" y1="3" x2="6" y2="7"/>
+                                    <circle cx="6" cy="9" r="0.5" fill="currentColor"/>
+                                </svg>
+                                18
+                            </span>
+                        </div>
+                        <div class="table-cell">
+                            <span class="status-badge success">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="2,6 5,9 10,3"/>
+                                </svg>
+                                8
+                            </span>
+                        </div>
+                        <div class="table-cell">
+                            <span class="status-badge warning">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6,2 L10,10 L2,10 Z"/>
+                                    <line x1="6" y1="5" x2="6" y2="7"/>
+                                </svg>
+                                26
+                            </span>
+                        </div>
+                        <div class="table-cell secondary">Jan 3</div>
+                        <div class="table-cell secondary">Mar 28</div>
+                        <div class="table-cell secondary">Priority 1 - Leadership commitment</div>
+                    </div>
+
+                    <div class="table-row">
+                        <div class="table-cell emphasis">
+                            <div class="project-name">
+                                <span class="project-dot" style="background: var(--project-green)"></span>
+                                Payment Gateway Integration
+                            </div>
+                        </div>
+                        <div class="table-cell monospace secondary">8</div>
+                        <div class="table-cell monospace secondary">0</div>
+                        <div class="table-cell monospace emphasis">8</div>
+                        <div class="table-cell">
+                            <span class="status-badge success">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="2,6 5,9 10,3"/>
+                                </svg>
+                                8
+                            </span>
+                        </div>
+                        <div class="table-cell">
+                            <span class="status-badge success">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="2,6 5,9 10,3"/>
+                                </svg>
+                                0
+                            </span>
+                        </div>
+                        <div class="table-cell">
+                            <span class="status-badge success">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="2,6 5,9 10,3"/>
+                                </svg>
+                                8
+                            </span>
+                        </div>
+                        <div class="table-cell secondary">Jan 3</div>
+                        <div class="table-cell secondary">Mar 15</div>
+                        <div class="table-cell secondary">Stripe integration for checkout</div>
+                    </div>
+
+                    <div class="table-row">
+                        <div class="table-cell emphasis">
+                            <div class="project-name">
+                                <span class="project-dot" style="background: var(--project-purple)"></span>
+                                Data Pipeline Optimization
+                            </div>
+                        </div>
+                        <div class="table-cell monospace secondary">16</div>
+                        <div class="table-cell monospace secondary">6</div>
+                        <div class="table-cell monospace emphasis">22</div>
+                        <div class="table-cell">
+                            <span class="status-badge warning">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6,2 L10,10 L2,10 Z"/>
+                                    <line x1="6" y1="5" x2="6" y2="7"/>
+                                </svg>
+                                12
+                            </span>
+                        </div>
+                        <div class="table-cell">
+                            <span class="status-badge success">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="2,6 5,9 10,3"/>
+                                </svg>
+                                6
+                            </span>
+                        </div>
+                        <div class="table-cell">
+                            <span class="status-badge warning">
+                                <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6,2 L10,10 L2,10 Z"/>
+                                    <line x1="6" y1="5" x2="6" y2="7"/>
+                                </svg>
+                                18
+                            </span>
+                        </div>
+                        <div class="table-cell secondary">Jan 17</div>
+                        <div class="table-cell secondary">Mar 31</div>
+                        <div class="table-cell secondary">Improve ETL performance by 3x</div>
+                    </div>
+                </div>
+
+                <div class="quarter-summary">
+                    <h2 class="summary-title">Q1 2025 Summary</h2>
+                    <div class="summary-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Total Capacity</div>
+                            <div class="metric-value">78 weeks</div>
+                            <div class="metric-label">6 Engineers × 12 + 1 Scientist × 6</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Total Allocated</div>
+                            <div class="metric-value">67.5 weeks</div>
+                            <div class="metric-label">Eng: 58.5 / Sci: 9.0</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Utilization</div>
+                            <div class="metric-value" style="color: var(--success-50)">87%</div>
+                            <div class="metric-label">On track for quarter</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TECHNICAL PROJECTS VIEW -->
+            <div class="technical-view" id="technical-view">
+                <aside class="side-panel">
+                    <div class="side-panel-section">
+                        <div class="section-title">Filters</div>
+                        <div class="filter-option">
+                            <div class="checkbox checked"></div>
+                            <span>All Projects</span>
+                        </div>
+                        <div class="filter-option">
+                            <div class="checkbox"></div>
+                            <span>On Track</span>
+                        </div>
+                        <div class="filter-option">
+                            <div class="checkbox"></div>
+                            <span>At Risk</span>
+                        </div>
+                        <div class="filter-option">
+                            <div class="checkbox"></div>
+                            <span>No Roadmap Link</span>
+                        </div>
+                    </div>
+
+                    <div class="side-panel-section">
+                        <div class="section-title">Sort By</div>
+                        <div class="filter-option">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary-50); margin-left: 4px;"></div>
+                            <span>Roadmap Project</span>
+                        </div>
+                        <div class="filter-option">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--border-default); margin-left: 4px;"></div>
+                            <span>Status</span>
+                        </div>
+                        <div class="filter-option">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--border-default); margin-left: 4px;"></div>
+                            <span>Allocation</span>
+                        </div>
+                    </div>
+                </aside>
+
+                <div class="technical-content">
+                    <div class="view-header">
+                        <h1 class="view-title">Technical Projects</h1>
+                        <div class="search-bar">
+                            <input type="text" class="search-input" placeholder="Search technical projects...">
+                            <button class="btn btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="3" x2="8" y2="13"/>
+                                    <line x1="3" y1="8" x2="13" y2="8"/>
+                                </svg>
+                                Add Technical Project
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="data-table">
+                        <div class="table-header" style="grid-template-columns: 300px 200px 100px 100px 1fr;">
+                            <div class="table-header-cell">Technical Project</div>
+                            <div class="table-header-cell">Roadmap Project</div>
+                            <div class="table-header-cell">Estimated</div>
+                            <div class="table-header-cell">Allocated</div>
+                            <div class="table-header-cell">Status</div>
+                        </div>
+
+                        <div class="table-row" style="grid-template-columns: 300px 200px 100px 100px 1fr;">
+                            <div class="table-cell emphasis">
+                                <div class="project-name">
+                                    <span class="project-dot" style="background: var(--project-blue)"></span>
+                                    Auth Service Upgrade
+                                </div>
+                            </div>
+                            <div class="table-cell secondary">Q1 Platform Roadmap</div>
+                            <div class="table-cell monospace secondary">6</div>
+                            <div class="table-cell">
+                                <span class="status-badge success">
+                                    <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="2,6 5,9 10,3"/>
+                                    </svg>
+                                    6
+                                </span>
+                            </div>
+                            <div class="table-cell secondary">On track</div>
+                        </div>
+
+                        <div class="table-row" style="grid-template-columns: 300px 200px 100px 100px 1fr;">
+                            <div class="table-cell emphasis">
+                                <div class="project-name">
+                                    <span class="project-dot" style="background: var(--project-green)"></span>
+                                    Payment API
+                                </div>
+                            </div>
+                            <div class="table-cell secondary">Payment Gateway</div>
+                            <div class="table-cell monospace secondary">8</div>
+                            <div class="table-cell">
+                                <span class="status-badge warning">
+                                    <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6,2 L10,10 L2,10 Z"/>
+                                        <line x1="6" y1="5" x2="6" y2="7"/>
+                                    </svg>
+                                    4.5
+                                </span>
+                            </div>
+                            <div class="table-cell secondary">Needs more allocation</div>
+                        </div>
+
+                        <div class="table-row" style="grid-template-columns: 300px 200px 100px 100px 1fr;">
+                            <div class="table-cell emphasis">
+                                <div class="project-name">
+                                    <span class="project-dot" style="background: var(--project-purple)"></span>
+                                    ML Pipeline
+                                </div>
+                            </div>
+                            <div class="table-cell secondary">Data Pipeline Optimization</div>
+                            <div class="table-cell monospace secondary">12</div>
+                            <div class="table-cell">
+                                <span class="status-badge warning">
+                                    <svg class="status-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6,2 L10,10 L2,10 Z"/>
+                                        <line x1="6" y1="5" x2="6" y2="7"/>
+                                    </svg>
+                                    8
+                                </span>
+                            </div>
+                            <div class="table-cell secondary">Behind schedule</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALLOCATION GRID VIEW -->
+            <div class="allocation-view active" id="allocation-view">
+                <div class="grid-controls">
+                    <h1 class="view-title">Q1 2025 Allocation Grid</h1>
+                    <div class="flex items-center gap-md">
+                        <button class="paintbrush-toggle">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3,13 Q3,10 6,8 L12,2 L14,4 L8,10 Q6,13 3,13Z"/>
+                                <circle cx="13" cy="3" r="1.5"/>
+                            </svg>
+                            <span class="toggle-label">Paintbrush Mode: OFF</span>
+                        </button>
+                        <select class="project-selector">
+                            <option>Select a project...</option>
+                            <option>Auth Service Upgrade</option>
+                            <option>Payment API</option>
+                            <option>ML Pipeline</option>
+                            <option>Data Processing</option>
+                            <option>Oncall</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="allocation-grid">
+                    <div class="grid-container">
+                        <!-- Header Row -->
+                        <div class="grid-header-row">
+                            <div class="grid-header-cell" style="grid-column: 1 / 3;">
+                                <span style="font-size: var(--font-size-caption); color: var(--text-secondary);">Sprint / Week</span>
+                            </div>
+                            <div class="grid-header-cell">
+                                <span class="engineer-name">Alice K</span>
+                                <span class="role-badge">Eng</span>
+                                <span class="capacity-text-small">11.5 / 12</span>
+                            </div>
+                            <div class="grid-header-cell">
+                                <span class="engineer-name">Bob M</span>
+                                <span class="role-badge">Eng</span>
+                                <span class="capacity-text-small">12 / 12</span>
+                            </div>
+                            <div class="grid-header-cell">
+                                <span class="engineer-name">Carol S</span>
+                                <span class="role-badge">Sci</span>
+                                <span class="capacity-text-small">6 / 6</span>
+                            </div>
+                            <div class="grid-header-cell">
+                                <span class="engineer-name">Dave R</span>
+                                <span class="role-badge">Eng</span>
+                                <span class="capacity-text-small" style="color: var(--warning-50);">8 / 12</span>
+                            </div>
+                            <div class="grid-header-cell">
+                                <span class="engineer-name">Eve T</span>
+                                <span class="role-badge">Eng</span>
+                                <span class="capacity-text-small" style="color: var(--warning-50);">6 / 12</span>
+                            </div>
+                            <div class="grid-header-cell">
+                                <span class="engineer-name">Frank L</span>
+                                <span class="role-badge">Eng</span>
+                                <span class="capacity-text-small">11 / 12</span>
+                            </div>
+                        </div>
+
+                        <!-- Sprint 1 -->
+                        <div class="grid-row">
+                            <div class="sprint-cell" style="grid-row: span 2;">1</div>
+                            <div class="week-cell">
+                                <span class="week-date">Jan 3</span>
+                                <span class="week-day">(W)</span>
+                                <span class="week-number">Wk 1/13</span>
+                            </div>
+                            <div class="grid-cell allocated project-green">
+                                <div class="cell-content">
+                                    <span class="project-text">Payment API</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">ML Pipeline</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">Research</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-blue">
+                                <div class="cell-content">
+                                    <span class="project-text">Auth Service</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell unallocated"></div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="week-cell">
+                                <span class="week-date">Jan 10</span>
+                                <span class="week-day">(Th)</span>
+                                <span class="week-number">Wk 2/13</span>
+                            </div>
+                            <div class="grid-cell allocated project-green">
+                                <div class="cell-content">
+                                    <span class="project-text">Payment API</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">ML Pipeline</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">Research</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-blue">
+                                <div class="cell-content">
+                                    <span class="project-text">Auth Service</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell unallocated"></div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sprint 2 -->
+                        <div class="grid-row sprint-separator">
+                            <div class="sprint-cell" style="grid-row: span 2;">2</div>
+                            <div class="week-cell">
+                                <span class="week-date">Jan 17</span>
+                                <span class="week-day">(W)</span>
+                                <span class="week-number">Wk 3/13</span>
+                            </div>
+                            <div class="grid-cell split project-green">
+                                <div class="split-section" style="background: rgba(99, 230, 190, 0.15);">
+                                    <span class="split-text">Pay API</span>
+                                    <span class="split-percentage">60%</span>
+                                </div>
+                                <div class="split-section" style="background: rgba(255, 169, 77, 0.15);">
+                                    <span class="split-text">Data</span>
+                                    <span class="split-percentage">40%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell oncall">
+                                <div class="oncall-content">
+                                    <svg class="oncall-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3,3 L5,1 L7,3 M5,1 L5,6 M13,13 L11,15 L9,13 M11,15 L11,10"/>
+                                        <rect x="5" y="6" width="6" height="4" rx="1"/>
+                                    </svg>
+                                    <span class="oncall-text">Oncall</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">Research</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-blue">
+                                <div class="cell-content">
+                                    <span class="project-text">Auth Service</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell unallocated"></div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="week-cell">
+                                <span class="week-date">Jan 24</span>
+                                <span class="week-day">(Th)</span>
+                                <span class="week-number">Wk 4/13</span>
+                            </div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">ML Pipeline</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell unallocated"></div>
+                            <div class="grid-cell allocated project-blue">
+                                <div class="cell-content">
+                                    <span class="project-text">Auth Service</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-yellow before-start">
+                                <svg class="warning-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6,2 L10,10 L2,10 Z"/>
+                                    <line x1="6" y1="5" x2="6" y2="7"/>
+                                </svg>
+                                <div class="cell-content">
+                                    <span class="project-text">New Feature</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sprint 3 -->
+                        <div class="grid-row sprint-separator">
+                            <div class="sprint-cell" style="grid-row: span 2;">3</div>
+                            <div class="week-cell">
+                                <span class="week-date">Jan 31</span>
+                                <span class="week-day">(W)</span>
+                                <span class="week-number">Wk 5/13</span>
+                            </div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">ML Pipeline</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">Research</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-blue">
+                                <div class="cell-content">
+                                    <span class="project-text">Auth Service</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-yellow">
+                                <div class="cell-content">
+                                    <span class="project-text">New Feature</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="week-cell">
+                                <span class="week-date">Feb 7</span>
+                                <span class="week-day">(Th)</span>
+                                <span class="week-number">Wk 6/13</span>
+                            </div>
+                            <div class="grid-cell unallocated"></div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">ML Pipeline</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-purple">
+                                <div class="cell-content">
+                                    <span class="project-text">Research</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-blue">
+                                <div class="cell-content">
+                                    <span class="project-text">Auth Service</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-yellow">
+                                <div class="cell-content">
+                                    <span class="project-text">New Feature</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                            <div class="grid-cell allocated project-orange">
+                                <div class="cell-content">
+                                    <span class="project-text">Data Process</span>
+                                    <span class="allocation-badge">100%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Tooltip (hidden by default, shown on hover) -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title">Payment API Integration</div>
+        <div class="tooltip-subtitle">Linked to: Payment Gateway ↗</div>
+        <div class="tooltip-row">
+            <span>Allocation:</span>
+            <span>100% of week</span>
+        </div>
+        <div class="tooltip-divider"></div>
+        <div class="tooltip-row">
+            <span>Project Progress:</span>
+            <span>4.5 / 8 weeks</span>
+        </div>
+        <div class="tooltip-row">
+            <span>Status:</span>
+            <span style="color: var(--warning-50)">Needs allocation ⚠</span>
+        </div>
+        <div class="tooltip-hint">Click to edit • Right-click for options</div>
+    </div>
+
+    <script>
+        // View switching
+        const viewTabs = document.querySelectorAll('.view-tab');
+        const views = {
+            'roadmap': document.getElementById('roadmap-view'),
+            'technical': document.getElementById('technical-view'),
+            'allocation': document.getElementById('allocation-view')
+        };
+
+        viewTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const viewName = tab.getAttribute('data-view');
+                
+                // Update active tab
+                viewTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Show selected view
+                Object.keys(views).forEach(key => {
+                    views[key].classList.remove('active');
+                });
+                views[viewName].classList.add('active');
+            });
+        });
+
+        // Paintbrush toggle
+        const paintbrushToggle = document.querySelector('.paintbrush-toggle');
+        paintbrushToggle.addEventListener('click', () => {
+            paintbrushToggle.classList.toggle('active');
+            const isActive = paintbrushToggle.classList.contains('active');
+            const label = paintbrushToggle.querySelector('.toggle-label');
+            label.textContent = isActive ? 'Paintbrush Mode: ON' : 'Paintbrush Mode: OFF';
+        });
+
+        // Grid cell hover tooltips (basic example)
+        const gridCells = document.querySelectorAll('.grid-cell.allocated');
+        const tooltip = document.getElementById('tooltip');
+
+        gridCells.forEach(cell => {
+            cell.addEventListener('mouseenter', (e) => {
+                // Position tooltip near cell
+                const rect = cell.getBoundingClientRect();
+                tooltip.style.left = rect.left + 'px';
+                tooltip.style.top = (rect.bottom + 10) + 'px';
+                tooltip.classList.add('visible');
+            });
+
+            cell.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>
