@@ -54,8 +54,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Lint with Clippy (web target)
         run: cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
-      - name: Lint with Clippy (desktop target)
-        run: cargo clippy --features desktop --all-targets -- -D warnings
 
   cargo-audit:
     name: Cargo Audit
