@@ -47,8 +47,6 @@ pub enum GridCellVariant {
         project2_color: ProjectColor,
         project2_percentage: f32,
     },
-    /// Oncall assignment
-    Oncall,
 }
 
 /// Allocation grid cell component
@@ -188,33 +186,6 @@ pub fn GridCell(
                         style: "--project-color: {color2_hex};",
                         span { class: "split-text", "{project2_name}" }
                         span { class: "split-percentage", "{project2_percentage:.0}%" }
-                    }
-                }
-            }
-        }
-        GridCellVariant::Oncall => {
-            rsx! {
-                div {
-                    class: "grid-cell grid-cell-oncall",
-                    onclick: move |evt| {
-                        if let Some(handler) = &onclick {
-                            handler.call(evt);
-                        }
-                    },
-                    div { class: "oncall-content",
-                        svg {
-                            class: "oncall-icon",
-                            view_box: "0 0 16 16",
-                            width: "16",
-                            height: "16",
-                            fill: "none",
-                            stroke: "currentColor",
-                            stroke_width: "2",
-                            // Phone icon
-                            path { d: "M3,3 L5,1 L7,3 M5,1 L5,6 M13,13 L11,15 L9,13 M11,15 L11,10" }
-                            rect { x: "5", y: "6", width: "6", height: "4", rx: "1" }
-                        }
-                        span { class: "oncall-text", "Oncall" }
                     }
                 }
             }

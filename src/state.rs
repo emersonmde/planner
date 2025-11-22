@@ -114,26 +114,17 @@ pub fn create_sample_plan() -> Plan {
         NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
     );
 
-    let oncall = TechnicalProject::new(
-        "Oncall".to_string(),
-        None, // Not linked to a roadmap project
-        0.0,
-        NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
-    );
-
     let auth_tech_id = auth_service.id;
     let payment_tech_id = payment_api.id;
     let ml_tech_id = ml_pipeline.id;
     let data_pipe_tech_id = data_pipeline.id;
     let research_tech_id = research.id;
-    let _oncall_tech_id = oncall.id;
 
     plan.technical_projects.push(auth_service);
     plan.technical_projects.push(payment_api);
     plan.technical_projects.push(ml_pipeline);
     plan.technical_projects.push(data_pipeline);
     plan.technical_projects.push(research);
-    plan.technical_projects.push(oncall);
 
     // Create sample allocations for first few weeks
     // Alice: Payment API for weeks 1-3, then switches to split allocation
@@ -161,12 +152,7 @@ pub fn create_sample_plan() -> Plan {
     for week_num in 0..4 {
         let week_start = quarter_start + chrono::Duration::weeks(week_num);
         let mut alloc = Allocation::new(bob_id, week_start);
-        if week_num == 2 {
-            // Oncall in week 3
-            alloc.assignments.push(Assignment::oncall());
-        } else {
-            alloc.assignments.push(Assignment::new(ml_tech_id, 100.0));
-        }
+        alloc.assignments.push(Assignment::new(ml_tech_id, 100.0));
         plan.allocations.push(alloc);
     }
 
@@ -250,10 +236,6 @@ pub fn validate_plan(plan: &Plan) -> Vec<ValidationError> {
     // Check allocation dates vs project start dates
     for allocation in &plan.allocations {
         for assignment in &allocation.assignments {
-            if assignment.is_oncall {
-                continue; // Skip oncall
-            }
-
             if let Some(tech_project) = plan.get_technical_project(&assignment.technical_project_id)
             {
                 if allocation.week_start_date < tech_project.start_date {

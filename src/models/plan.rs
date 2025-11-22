@@ -199,8 +199,6 @@ pub struct Assignment {
     /// Percentage of the week (0.0 to 100.0)
     /// For split allocations, multiple assignments for same week must sum to 100
     pub percentage: f32,
-    /// Special flag for oncall assignments
-    pub is_oncall: bool,
 }
 
 impl Assignment {
@@ -213,16 +211,6 @@ impl Assignment {
         Self {
             technical_project_id,
             percentage,
-            is_oncall: false,
-        }
-    }
-
-    pub fn oncall() -> Self {
-        Self {
-            // Use nil UUID for oncall
-            technical_project_id: Uuid::nil(),
-            percentage: 100.0,
-            is_oncall: true,
         }
     }
 }
@@ -274,11 +262,6 @@ impl Allocation {
     #[allow(dead_code)] // Reserved for editing UI
     pub fn is_empty(&self) -> bool {
         self.assignments.is_empty()
-    }
-
-    /// Check if this is an oncall week
-    pub fn is_oncall(&self) -> bool {
-        self.assignments.iter().any(|a| a.is_oncall)
     }
 }
 

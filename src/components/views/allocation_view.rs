@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::components::ui::{
     AssignProjectModal, ContextMenu, FloatingFab, FloatingProjectPanel, GridCell,
-    SplitAllocationModal,
+    KeybindingsOverlay, SplitAllocationModal,
 };
 use crate::models::{Allocation, Assignment};
 use crate::state::use_plan_state;
@@ -46,9 +46,12 @@ pub fn AllocationView() -> Element {
     let mut split_project2_id = use_signal(|| None::<uuid::Uuid>);
     let mut split_percentage = use_signal(|| 50.0);
 
+    // Keybindings overlay state
+    let mut keybindings_visible = use_signal(|| false);
+
     // Clipboard state and focused cell for hover-based copy/paste
     let mut clipboard = use_signal(|| None::<Vec<Assignment>>);
-    let focused_cell = use_signal(|| None::<(uuid::Uuid, chrono::NaiveDate)>);
+    let mut focused_cell = use_signal(|| None::<(uuid::Uuid, chrono::NaiveDate)>);
 
     // Generate weeks for the quarter using memo
     let weeks = use_memo(move || {
@@ -82,6 +85,7 @@ pub fn AllocationView() -> Element {
             context_menu_visible.set(false);
             split_modal_visible.set(false);
             assign_modal_visible.set(false);
+            keybindings_visible.set(false);
         }
 
         // Delete/Backspace - clear focused cell
@@ -134,6 +138,11 @@ pub fn AllocationView() -> Element {
                     });
                 }
             }
+        }
+
+        // ? - toggle keybindings overlay
+        if evt.key() == Key::Character("?".to_string()) {
+            keybindings_visible.set(!keybindings_visible());
         }
     };
 
@@ -224,11 +233,7 @@ pub fn AllocationView() -> Element {
 
                     // Create new allocation with single project
                     let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
-                    alloc.assignments = vec![crate::models::Assignment {
-                        technical_project_id: proj_id,
-                        percentage: 100.0,
-                        is_oncall: false,
-                    }];
+                    alloc.assignments = vec![crate::models::Assignment::new(proj_id, 100.0)];
                     p.allocations.push(alloc);
                 });
             }
@@ -258,16 +263,8 @@ pub fn AllocationView() -> Element {
                         // Create split allocation
                         let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
                         alloc.assignments = vec![
-                            crate::models::Assignment {
-                                technical_project_id: proj1_id,
-                                percentage: split_percentage(),
-                                is_oncall: false,
-                            },
-                            crate::models::Assignment {
-                                technical_project_id: proj2_id,
-                                percentage: 100.0 - split_percentage(),
-                                is_oncall: false,
-                            },
+                            crate::models::Assignment::new(proj1_id, split_percentage()),
+                            crate::models::Assignment::new(proj2_id, 100.0 - split_percentage()),
                         ];
                         p.allocations.push(alloc);
                     });
@@ -322,11 +319,7 @@ pub fn AllocationView() -> Element {
 
                     // Create new allocation
                     let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
-                    alloc.assignments = vec![crate::models::Assignment {
-                        technical_project_id: project_id,
-                        percentage: 100.0,
-                        is_oncall: false,
-                    }];
+                    alloc.assignments = vec![crate::models::Assignment::new(project_id, 100.0)];
                     p.allocations.push(alloc);
                 });
             }
@@ -405,6 +398,10 @@ pub fn AllocationView() -> Element {
 
     let mut handle_cell_mouseenter =
         move |team_member_id: uuid::Uuid, week_start: chrono::NaiveDate| {
+            // Always set focused cell for hover-based copy/paste
+            focused_cell.set(Some((team_member_id, week_start)));
+
+            // Handle paintbrush drag
             if paintbrush_active() && is_dragging() {
                 drag_cells.with_mut(|cells| {
                     if !cells.contains(&(team_member_id, week_start)) {
@@ -675,6 +672,12 @@ pub fn AllocationView() -> Element {
                     is_dragging.set(false);
                     drag_cells.set(Vec::new());
                 },
+            }
+
+            // Keybindings Overlay
+            KeybindingsOverlay {
+                visible: keybindings_visible(),
+                on_close: move |_| keybindings_visible.set(false),
             }
         }
     }

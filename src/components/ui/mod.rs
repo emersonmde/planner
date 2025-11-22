@@ -9,6 +9,7 @@ mod floating_fab;
 mod floating_project_panel;
 mod grid_cell;
 mod input;
+mod keybindings_overlay;
 mod split_modal;
 
 pub use assign_project_modal::AssignProjectModal;
@@ -22,4 +23,5 @@ pub use floating_fab::FloatingFab;
 pub use floating_project_panel::FloatingProjectPanel;
 pub use grid_cell::{GridCell, GridCellVariant};
 pub use input::Input;
+pub use keybindings_overlay::KeybindingsOverlay;
 pub use split_modal::SplitAllocationModal;

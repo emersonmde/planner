@@ -14,11 +14,6 @@ pub fn calculate_cell_variant(
         return GridCellVariant::Empty;
     };
 
-    // Oncall assignment
-    if alloc.is_oncall() {
-        return GridCellVariant::Oncall;
-    }
-
     // Split allocation (2 projects)
     if alloc.assignments.len() == 2 {
         return create_split_variant(alloc, plan);
