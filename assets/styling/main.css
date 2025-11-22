@@ -375,15 +375,242 @@
   font-family: var(--font-mono);
 }
 
+/* ===== PAINTBRUSH MODE CONTROLS ===== */
+.paintbrush-controls {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.paintbrush-toggle {
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+}
+
+.paintbrush-toggle:hover {
+  background: var(--bg-overlay);
+  border-color: var(--border-emphasis);
+}
+
+.paintbrush-toggle.active {
+  background: var(--primary-90);
+  border-color: var(--primary-50);
+  color: var(--primary-50);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.toggle-state {
+  font-weight: 600;
+}
+
+/* Project Selector */
+.project-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 320px;
+}
+
+.project-search {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-body);
+  transition: all var(--transition-quick);
+}
+
+.project-search:hover {
+  background: var(--bg-overlay);
+  border-color: var(--border-emphasis);
+}
+
+.project-search:focus {
+  outline: none;
+  border-color: var(--primary-50);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 300px;
+  overflow-y: auto;
+  padding: var(--space-xs);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.project-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-size-body);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--transition-quick);
+}
+
+.project-option:hover {
+  background: var(--bg-overlay);
+  border-color: var(--border-emphasis);
+}
+
+.project-option.selected {
+  background: var(--primary-90);
+  border-color: var(--primary-50);
+  color: var(--primary-50);
+}
+
+.project-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.project-option .project-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-option .project-allocated {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.oncall-option {
+  border-top: 1px solid var(--border-default);
+  margin-top: var(--space-xs);
+}
+
+.oncall-indicator {
+  font-size: 16px;
+}
+
+/* Selected Project Indicator */
+.selected-project-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+}
+
+.selected-project-indicator.warning {
+  border-color: var(--warning-50);
+  background: rgba(255, 159, 10, 0.1);
+}
+
+.selected-project-indicator .indicator-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.selected-project-indicator .indicator-value {
+  color: var(--primary-50);
+  font-weight: 600;
+}
+
+.selected-project-indicator.warning .indicator-label {
+  color: var(--warning-50);
+  font-weight: 600;
+}
+
+/* Cell Error State */
+.grid-cell-error {
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* Cell Success State - brief flash on allocation */
+.grid-cell-success {
+  animation: success-pulse 0.4s ease-out;
+}
+
+@keyframes success-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--primary-50);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(10, 132, 255, 0);
+  }
+}
+
+/* Cell being dragged over */
+.grid-cell-drag-target {
+  background: rgba(10, 132, 255, 0.15) !important;
+  border: 2px solid var(--primary-50) !important;
+  transform: scale(1.03);
+}
+
 /* ===== ALLOCATION GRID ===== */
 .allocation-grid-view {
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cursor changes when paintbrush is active */
+.allocation-grid-view.paintbrush-active {
+  cursor: crosshair;
+}
+
+.allocation-grid-view.paintbrush-active .grid-cell {
+  cursor: crosshair;
 }
 
 .allocation-grid-container {
   height: 100%;
   overflow: auto;
+  user-select: none; /* Prevent text selection during drag */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .allocation-grid {
@@ -557,10 +784,33 @@
   background: var(--bg-tertiary);
   border: 1px dashed var(--border-default);
   border-radius: var(--radius-md);
+  transition: all var(--transition-quick);
 }
 
 .grid-cell-empty:hover {
   border-color: var(--border-emphasis);
+}
+
+/* Enhanced hover when paintbrush is active */
+.paintbrush-active .grid-cell-empty:hover {
+  background: rgba(10, 132, 255, 0.1);
+  border-color: var(--primary-50);
+  border-style: solid;
+  transform: scale(1.02);
+}
+
+.paintbrush-active .grid-cell:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+}
+
+.paintbrush-active .grid-cell-empty .empty-icon {
+  transition: all var(--transition-quick);
+}
+
+.paintbrush-active .grid-cell-empty:hover .empty-icon {
+  color: var(--primary-50);
+  font-size: 24px;
 }
 
 .empty-icon {
