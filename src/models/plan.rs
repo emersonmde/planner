@@ -47,15 +47,15 @@ impl ProjectColor {
     /// Convert to hex color string for CSS (candy bright palette - modern dark mode)
     pub fn to_hex(self) -> &'static str {
         match self {
-            ProjectColor::Blue => "#5AC8FA",      // iOS blue - vibrant but refined
-            ProjectColor::Green => "#4ADE80",     // Fresh green - energetic
-            ProjectColor::Yellow => "#FBBF24",    // Amber gold - premium
-            ProjectColor::Orange => "#FB923C",    // Warm orange - inviting
-            ProjectColor::Red => "#F472B6",       // Vibrant pink - playful
-            ProjectColor::Purple => "#A78BFA",    // Soft purple - elegant
-            ProjectColor::Pink => "#E879F9",      // Bright magenta - bold
-            ProjectColor::Teal => "#2DD4BF",      // Aqua - refreshing
-            ProjectColor::Indigo => "#818CF8",    // Periwinkle - calm
+            ProjectColor::Blue => "#5AC8FA",   // iOS blue - vibrant but refined
+            ProjectColor::Green => "#4ADE80",  // Fresh green - energetic
+            ProjectColor::Yellow => "#FBBF24", // Amber gold - premium
+            ProjectColor::Orange => "#FB923C", // Warm orange - inviting
+            ProjectColor::Red => "#F472B6",    // Vibrant pink - playful
+            ProjectColor::Purple => "#A78BFA", // Soft purple - elegant
+            ProjectColor::Pink => "#E879F9",   // Bright magenta - bold
+            ProjectColor::Teal => "#2DD4BF",   // Aqua - refreshing
+            ProjectColor::Indigo => "#818CF8", // Periwinkle - calm
         }
     }
 
