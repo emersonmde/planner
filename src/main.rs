@@ -38,7 +38,7 @@ fn App() -> Element {
     use_context_provider(|| plan);
 
     // Active view state
-    let active_view = use_signal(|| View::Roadmap);
+    let active_view = use_signal(|| View::Allocation);
 
     rsx! {
         document::Link { rel: "icon", href: FAVICON }

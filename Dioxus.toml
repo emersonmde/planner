@@ -5,6 +5,15 @@
 title = "planner"
 base_path = "/planner"
 
+[desktop.app]
+# Desktop window configuration
+title = "Quarterly Planner"
+
+[desktop.app.window]
+width = 1440
+height = 900
+resizable = true
+
 # include `assets` in web platform
 [web.resource]
 # Additional CSS style files

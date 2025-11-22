@@ -41,9 +41,9 @@ pub fn TopNav(active_view: Signal<View>) -> Element {
             // View tabs
             div { class: "view-tabs",
                 button {
-                    class: if active_view() == View::Roadmap { "view-tab active" } else { "view-tab" },
-                    onclick: move |_| active_view.set(View::Roadmap),
-                    "Roadmap"
+                    class: if active_view() == View::Allocation { "view-tab active" } else { "view-tab" },
+                    onclick: move |_| active_view.set(View::Allocation),
+                    "Allocation"
                 }
                 button {
                     class: if active_view() == View::Technical { "view-tab active" } else { "view-tab" },
@@ -51,9 +51,9 @@ pub fn TopNav(active_view: Signal<View>) -> Element {
                     "Technical"
                 }
                 button {
-                    class: if active_view() == View::Allocation { "view-tab active" } else { "view-tab" },
-                    onclick: move |_| active_view.set(View::Allocation),
-                    "Allocation"
+                    class: if active_view() == View::Roadmap { "view-tab active" } else { "view-tab" },
+                    onclick: move |_| active_view.set(View::Roadmap),
+                    "Roadmap"
                 }
             }
 

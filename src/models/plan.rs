@@ -44,18 +44,18 @@ pub enum ProjectColor {
 }
 
 impl ProjectColor {
-    /// Convert to hex color string for CSS
+    /// Convert to hex color string for CSS (candy bright palette - modern dark mode)
     pub fn to_hex(self) -> &'static str {
         match self {
-            ProjectColor::Blue => "#64D2FF",
-            ProjectColor::Green => "#63E6BE",
-            ProjectColor::Yellow => "#FFD43B",
-            ProjectColor::Orange => "#FFA94D",
-            ProjectColor::Red => "#FF8787",
-            ProjectColor::Purple => "#CC5DE8",
-            ProjectColor::Pink => "#F783AC",
-            ProjectColor::Teal => "#4FD1C5",
-            ProjectColor::Indigo => "#748FFC",
+            ProjectColor::Blue => "#5AC8FA",      // iOS blue - vibrant but refined
+            ProjectColor::Green => "#4ADE80",     // Fresh green - energetic
+            ProjectColor::Yellow => "#FBBF24",    // Amber gold - premium
+            ProjectColor::Orange => "#FB923C",    // Warm orange - inviting
+            ProjectColor::Red => "#F472B6",       // Vibrant pink - playful
+            ProjectColor::Purple => "#A78BFA",    // Soft purple - elegant
+            ProjectColor::Pink => "#E879F9",      // Bright magenta - bold
+            ProjectColor::Teal => "#2DD4BF",      // Aqua - refreshing
+            ProjectColor::Indigo => "#818CF8",    // Periwinkle - calm
         }
     }
 
@@ -63,15 +63,15 @@ impl ProjectColor {
     #[allow(dead_code)] // Reserved for future CSS-in-JS styling
     pub fn to_css_var(self) -> &'static str {
         match self {
-            ProjectColor::Blue => "var(--project-blue)",
-            ProjectColor::Green => "var(--project-green)",
+            ProjectColor::Blue => "var(--project-cyan)",
+            ProjectColor::Green => "var(--project-lime)",
             ProjectColor::Yellow => "var(--project-yellow)",
             ProjectColor::Orange => "var(--project-orange)",
-            ProjectColor::Red => "var(--project-red)",
-            ProjectColor::Purple => "var(--project-purple)",
-            ProjectColor::Pink => "var(--project-pink)",
+            ProjectColor::Red => "var(--project-pink)",
+            ProjectColor::Purple => "var(--project-violet)",
+            ProjectColor::Pink => "var(--project-magenta)",
             ProjectColor::Teal => "var(--project-teal)",
-            ProjectColor::Indigo => "var(--project-indigo)",
+            ProjectColor::Indigo => "var(--project-purple)",
         }
     }
 }

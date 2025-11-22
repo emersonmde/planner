@@ -3,10 +3,11 @@
 
 :root {
   /* ===== COLORS - BACKGROUNDS ===== */
-  --bg-primary: #1c1c1e;
-  --bg-secondary: #2c2c2e;
-  --bg-tertiary: #3a3a3c;
-  --bg-overlay: #48484a;
+  /* Darker foundation with maintained elevation hierarchy (9-10 point progressions) */
+  --bg-primary: #0f0f11;
+  --bg-secondary: #18181a;
+  --bg-tertiary: #212125;
+  --bg-overlay: #2a2a2e;
 
   /* ===== COLORS - BORDERS ===== */
   --border-subtle: rgba(255, 255, 255, 0.08);
@@ -14,51 +15,53 @@
   --border-emphasis: rgba(255, 255, 255, 0.18);
 
   /* ===== COLORS - TEXT ===== */
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(255, 255, 255, 0.70);
+  /* Pure white for maximum contrast against darker backgrounds */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.75);
   --text-tertiary: rgba(255, 255, 255, 0.50);
   --text-disabled: rgba(255, 255, 255, 0.30);
 
   /* ===== COLORS - SEMANTIC ===== */
-  /* Primary Actions (Apple Blue family) */
-  --primary-50: #0A84FF;
-  --primary-60: #0A7AEF;
-  --primary-70: #0970DF;
+  /* Primary Actions (Electric Cyan-Blue) */
+  --primary-50: #00B8FF;
+  --primary-60: #0099DD;
+  --primary-70: #007ABB;
 
-  /* Success States (Vibrant Green) */
-  --success-50: #32D74B;
-  --success-60: #2DC945;
-  --success-bg: rgba(50, 215, 75, 0.12);
+  /* Success States (Matrix Green) */
+  --success-50: #00FF41;
+  --success-60: #00DD38;
+  --success-bg: rgba(0, 255, 65, 0.12);
 
-  /* Warning States (Punchy Orange) */
-  --warning-50: #FF9F0A;
-  --warning-60: #EF9500;
-  --warning-bg: rgba(255, 159, 10, 0.12);
+  /* Warning States (Amber Alert) */
+  --warning-50: #FFB800;
+  --warning-60: #DD9F00;
+  --warning-bg: rgba(255, 184, 0, 0.12);
 
-  /* Error States (Vivid Red) */
-  --error-50: #FF453A;
-  --error-60: #EF3A30;
-  --error-bg: rgba(255, 69, 58, 0.12);
+  /* Error States (Hot Red) */
+  --error-50: #FF0055;
+  --error-60: #DD0048;
+  --error-bg: rgba(255, 0, 85, 0.12);
 
-  /* Oncall Indicator (Purple) */
-  --oncall-50: #BF5AF2;
-  --oncall-60: #B550E2;
-  --oncall-bg: rgba(191, 90, 242, 0.12);
+  /* Oncall Indicator (Electric Purple) */
+  --oncall-50: #DA00FF;
+  --oncall-60: #BB00DD;
+  --oncall-bg: rgba(218, 0, 255, 0.12);
 
-  /* Unallocated State (Muted attention) */
-  --unallocated-50: #FF6B6B;
-  --unallocated-bg: rgba(255, 107, 107, 0.10);
+  /* Unallocated State (Hot Pink attention) */
+  --unallocated-50: #FF0055;
+  --unallocated-bg: rgba(255, 0, 85, 0.10);
 
   /* ===== COLORS - PROJECT PALETTE ===== */
-  --project-blue: #64D2FF;
-  --project-green: #63E6BE;
-  --project-yellow: #FFD43B;
-  --project-orange: #FFA94D;
-  --project-red: #FF8787;
-  --project-purple: #CC5DE8;
-  --project-pink: #F783AC;
-  --project-teal: #4FD1C5;
-  --project-indigo: #748FFC;
+  /* Candy bright colors - modern dark mode (60-85% saturation) */
+  --project-cyan: #5AC8FA;      /* iOS blue - vibrant but refined */
+  --project-green: #4ADE80;     /* Fresh green - energetic */
+  --project-purple: #A78BFA;    /* Soft purple - elegant */
+  --project-orange: #FB923C;    /* Warm orange - inviting */
+  --project-pink: #F472B6;      /* Vibrant pink - playful */
+  --project-yellow: #FBBF24;    /* Amber gold - premium */
+  --project-magenta: #E879F9;   /* Bright magenta - bold */
+  --project-teal: #2DD4BF;      /* Aqua - refreshing */
+  --project-indigo: #818CF8;    /* Periwinkle - calm */
 
   /* ===== SPACING ===== */
   /* 8px Base Unit - All spacing uses multiples of 4px or 8px */
