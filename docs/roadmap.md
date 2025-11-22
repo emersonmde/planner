@@ -1,585 +1,663 @@
 # Quarterly Planner - Development Roadmap
 
-This roadmap breaks down the development of the Quarterly Planner application into logical, incrementally deliverable phases. Each phase builds successfully, passes all tests, and results in a working application.
+This roadmap focuses on upcoming development phases. Completed phases are documented in git history and implementation notes.
 
 ## Progress Status
 
-**Current Status:** Phase 4 Complete (4 of 16 phases)
+**Current Status:** Phase 6.6 In Progress (6.6 of 17 phases)
 
-- ✅ **Phase 1**: Foundation & Design System
-- ✅ **Phase 2**: Data Models & State Management
-- ✅ **Phase 3**: Roadmap View (Table Display)
-- ✅ **Phase 4**: Allocation Grid (Read-Only Display)
-- 🔜 **Phase 5**: Technical Projects View
+- ✅ Phases 1-6 Complete (Foundation, Views, Paintbrush Mode)
+- ✅ **Phase 6.5**: Grid Layout Rotation (Vertical Scrolling UX) - COMPLETE
+- 🔄 **Phase 6.6**: UI/UX Refinements (Floating FAB, Visual Polish) - IN PROGRESS
+- ⏸️ **Phase 7**: Context Menu & Advanced Interactions - PARTIALLY COMPLETE
+- 📋 **Phases 8-17**: Planned
 
-**Build Status:** ✅ Compiles successfully with 20 warnings (unused code - expected during incremental development)
-
----
-
-## Overview
-
-The Quarterly Planner is a Dioxus-based desktop/web application for engineering managers to plan quarterly resource allocation across roadmap projects, technical projects, and individual engineers. The application features:
-
-- **Three main views**: Roadmap, Technical Projects, and Allocation Grid
-- **Dark mode design system** with Apple-inspired aesthetics
-- **Interactive allocation grid** with paintbrush mode for quick assignment
-  - **Timeline convention**: Time flows horizontally (weeks across top), engineers vertically (left side)
-  - **Multi-week project connections**: Visual continuity shows project duration at a glance
-  - **Sticky headers**: Both axes remain visible during scroll
-- **Capacity tracking** and validation
-- **File-based persistence** (JSON format)
-
-**Key Documentation References:**
-- UI Design: `docs/ui-design.md` (authoritative design spec with updated grid layout)
-- Component Reference: `docs/component-reference.md`
-- Visual Mockup: `docs/mockup.html` (note: shows old vertical layout, use ui-design.md for current spec)
+**Build Status:** ✅ Compiles successfully
 
 ---
 
-## Development Workflow
+## Phase 6.5: Grid Layout Rotation (Vertical Scrolling UX) ✅ COMPLETE
+**Goal:** Rotate grid to vertical-scrolling layout for better UX
 
-### Quality Assurance
+**Rationale:** More weeks (13) than engineers (4-8) means vertical scrolling is more natural than horizontal scrolling. Better use of screen space on wide monitors.
 
-The project uses a multi-layered approach to ensure code quality:
+### Design Analysis
 
-1. **Pre-commit Hook** (`.githooks/pre-commit`)
-   - Runs automatically before each commit (requires one-time setup: `git config core.hooksPath .githooks`)
-   - Checks: formatting, linting (web + desktop), tests, documentation, security audit, WASM build
-   - Prevents commits that don't pass all checks
-   - **Required tools**: `cargo-audit`, `dioxus-cli` (dx)
+**Current Layout (Horizontal Timeline):**
+- **Columns**: Weeks (13+ cells wide) → horizontal scroll required
+- **Rows**: Engineers (4-8 cells tall) → minimal vertical scroll
+- **Headers**: Week dates across top (sticky on vertical scroll), Engineer names on left (sticky on horizontal scroll)
+- **Sprint Separators**: Vertical dashed lines every 2 weeks
 
-2. **Continuous Integration** (`.github/workflows/ci.yml`)
-   - Triggered on: push to main, pull requests
-   - Jobs: test, fmt, clippy (web + desktop), cargo-audit, WASM build
-   - **GitHub Pages Deployment**: Automatically deploys to GitHub Pages on push to main
-   - All CI checks mirror the pre-commit hook for consistency
-
-### Setup
-
-```bash
-# One-time setup: Configure git to use pre-commit hooks
-git config core.hooksPath .githooks
-
-# Install required tools
-cargo install cargo-audit --locked
-cargo install dioxus-cli --locked
-```
-
-### Manual Quality Checks
-
-```bash
-# Format code
-cargo fmt
-
-# Lint (web target)
-cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
-
-# Lint (desktop target)
-cargo clippy --features desktop --all-targets -- -D warnings
-
-# Run tests
-cargo test --verbose --features desktop
-
-# Security audit
-cargo audit
-
-# Build documentation
-cargo doc --no-deps
-
-# Build WASM bundle
-dx bundle --release
-```
-
----
-
-## Phase 1: Foundation & Design System ✅ COMPLETE
-**Goal:** Establish the core architecture, design system, and layout structure
+**New Layout (Vertical Timeline):**
+- **Columns**: Engineers (4-8 cells wide) → minimal horizontal scroll
+- **Rows**: Weeks (13+ cells tall) → vertical scroll (more natural)
+- **Headers**: Engineer names + capacity across top (sticky on vertical scroll), Week dates on left (sticky on horizontal scroll)
+- **Sprint Separators**: Horizontal dashed lines every 2 weeks
 
 ### Tasks
-1. **Set up project structure** ✅
-   - Create module structure: `models/`, `components/ui/`, `components/layout/`, `components/views/`
-   - Set up data models (see `docs/ui-design.md` section 9.2)
-   - Create design token CSS file
 
-2. **Implement design tokens** ✅ (Reference: `docs/ui-design.md` section 12.1)
-   - Create `/assets/styling/theme.css` with all CSS variables
-   - Colors (backgrounds, borders, text, semantic, project palette)
-   - Typography system
-   - Spacing system
-   - Shadows and border radii
+1. **Update grid structure** (src/components/views/allocation_view.rs)
+   - Change `grid-template-columns` from `180px repeat({weeks}, 150px)` to `120px repeat({engineers}, 180px)`
+   - Swap iteration order: outer loop = weeks, inner loop = engineers
+   - Update allocation map lookup to use (engineer_id, week_start) correctly
 
-3. **Build layout foundation** ✅ (Reference: `docs/ui-design.md` section 7)
-   - Create `TopNav` component with basic structure
-   - Implement view switching (Roadmap | Technical | Allocation tabs)
-   - Create main content container
-   - Add quarter selector dropdown
-
-4. **Create basic UI components** ✅ (Reference: `docs/component-reference.md` sections 2-3)
-   - Button component (primary, secondary, icon variants)
-   - Badge component (success, warning, error variants)
-   - Input component (search, text)
-   - Basic dropdown/select component
-
-### Acceptance Criteria
-- [x] Application builds successfully with `dx build`
-- [x] TopNav renders with all elements (title, quarter selector, view tabs, capacity indicator placeholder)
-- [x] View tabs switch between three empty view containers
-- [x] All CSS design tokens are defined and accessible
-- [x] Button, Badge, and Input components render correctly in all variants
-- [x] Dark mode theme displays correctly
-
-### Manual Testing
-**Run:** `dx serve`
-1. Verify top navigation displays correctly ✅
-2. Click each view tab - container should switch (empty for now) ✅
-3. Check button hover states and variants ✅
-4. Verify badge colors match design spec ✅
-5. Test input focus states ✅
-
-### Documentation Updates
-- [x] Update README.md with setup instructions
-- [x] Document component props in code comments
-- [x] Create `docs/architecture.md` describing module structure (documented in CLAUDE.md)
-- [x] Create `docs/adrs/ADR-001-design-system-structure.md` - Document design token approach, CSS architecture, module organization
-
----
-
-## Phase 2: Data Models & State Management ✅ COMPLETE
-**Goal:** Implement core data structures and state management
-
-### Tasks
-1. **Define data models** ✅ (Reference: `docs/ui-design.md` section 9.2)
-   - Create `models/plan.rs` with:
-     - `Engineer` struct (id, name, role, capacity)
-     - `RoadmapProject` struct (id, name, estimates, dates, color)
-     - `TechnicalProject` struct (id, name, roadmap_project_id, estimates)
-     - `Allocation` struct (engineer_id, week_start_date, assignments)
-     - `ProjectColor` enum with hex conversion methods
-   - Implement serialization/deserialization (serde)
-
-2. **Set up state management** ✅
-   - Create global state using Dioxus signals
-   - Implement `use_plan_state` hook
-   - Add state initialization with sample data
-   - Create utility functions for capacity calculations
-
-3. **Week/Sprint calculation utilities** ✅ (Reference: `docs/ui-design.md` section 7.3)
-   - Create `utils/date_helpers.rs`
-   - Implement quarter start date to week list conversion
-   - Sprint number calculation (2-week sprints)
-   - Week number formatting (e.g., "Wk 1/13")
-
-4. **Validation logic** ✅
-   - Allocation percentage validation (must sum to 100%)
-   - Capacity overflow detection
-   - Start date vs allocation date validation
-
-### Acceptance Criteria
-- [x] Application builds successfully
-- [x] All data models compile with proper traits (Debug, Clone, Serialize, Deserialize)
-- [x] Sample data initializes correctly in global state
-- [x] Week/sprint calculations produce correct results
-- [x] Validation functions return appropriate errors
-
-### Manual Testing
-**Run:** `dx serve`
-1. Open browser console and verify state initializes ✅
-2. Check that sample data is accessible (add temporary debug output) ✅
-
-### Documentation Updates
-- [x] Document data model schema in `docs/architecture.md` (documented in CLAUDE.md)
-- [x] Add code comments explaining validation rules
-- [x] Document state management patterns used (documented in CLAUDE.md)
-- [x] Create `docs/adrs/ADR-002-state-management.md` - Document why Dioxus Signals, alternatives considered, state structure decisions
-- [x] Create `docs/state-management.md` - Document patterns for using `use_plan_state`, signal updates, computed values
-
----
-
-## Phase 3: Roadmap View (Table Display) ✅ COMPLETE
-**Goal:** Implement the Roadmap Projects view with full table functionality
-
-### Tasks
-1. **Create data table component** ✅ (Reference: `docs/component-reference.md` section 4, `docs/mockup.html` lines 1074-1208)
-   - Build generic `DataTable` component
-   - Header row with column titles
-   - Dynamic row generation from data
-   - Hover states
-   - Cell styling (emphasis, monospace, secondary text)
-
-2. **Implement Roadmap Projects table** ✅
-   - Project name with color dot
-   - Engineering/Science/Total estimates
-   - Engineering/Science/Total allocations (with status badges)
-   - Start date and launch date
-   - Notes field (truncated)
-
-3. **Add capacity badge logic** ✅ (Reference: `docs/component-reference.md` section 2)
-   - Calculate allocated vs estimated for each project
-   - Apply success/warning/error styling based on thresholds:
-     - Success: within 5% (±0.5 weeks per 10 weeks)
-     - Warning: 5-25% off
-     - Error: >25% off
-
-4. **Build quarter summary section** ✅ (Reference: `docs/mockup.html` lines 1210-1229)
-   - Total capacity calculation
-   - Total allocated calculation
-   - Utilization percentage
-   - Capacity breakdown by role
-
-5. **Add search/filter functionality** ✅
-   - Search input component
-   - Filter projects by name
-   - "Add Roadmap Project" button (placeholder for now)
-
-### Acceptance Criteria
-- [x] Application builds successfully
-- [x] Roadmap view displays table with sample data
-- [x] Status badges show correct colors based on allocation
-- [x] Quarter summary shows accurate capacity calculations
-- [x] Search filters projects by name
-- [x] Table rows have hover states
-- [x] All typography and spacing match design spec
-
-### Manual Testing
-**Run:** `dx serve`
-1. Switch to Roadmap view ✅
-2. Verify all table columns display correctly ✅
-3. Check status badge colors (success/warning/error) ✅
-4. Verify quarter summary calculations ✅
-5. Test search functionality ✅
-6. Hover over table rows to verify hover state ✅
-
-### Documentation Updates
-- [x] Document capacity calculation formulas in code comments
-
-### Implementation Notes
-- Created generic `DataTable`, `TableRow`, `TableCell`, `ProjectName` components (src/components/ui/data_table.rs)
-- Added capacity calculation methods to Plan model: `calculate_roadmap_allocated_weeks()`, `calculate_total_capacity()`, `calculate_total_allocated()`
-- Implemented `get_capacity_status()` function to determine badge type based on allocation variance
-- Full RoadmapView with search, table, and quarter summary (src/components/views/roadmap_view.rs)
-- Added comprehensive CSS for data tables and quarter summary section (assets/styling/main.css)
-
----
-
-## Phase 4: Allocation Grid (Read-Only Display) ✅ COMPLETE
-**Goal:** Build the allocation grid with read-only cell display
-
-**Note:** Grid uses timeline convention - time flows horizontally (weeks across top), people vertically (engineers on left)
-
-### Tasks
-1. **Create grid structure** ✅ (Reference: `docs/ui-design.md` section 5.3 & 7.3)
-   - Grid container with dynamic columns based on week count
-   - Column headers: Sprint numbers, week dates, week progress (3 rows, sticky on vertical scroll)
-   - Row headers: Engineer names, roles, capacity indicators (fixed width 180px, sticky on horizontal scroll)
-   - Sprint separators (VERTICAL dashed lines every 2 weeks)
-
-2. **Implement GridCell component** ✅ (Reference: `docs/ui-design.md` section 5.3)
-   - Cell dimensions: 150px width × 120px height (increased from 120px × 96px for better readability)
-   - Empty cell state (dashed border, "+" icon)
-   - Single week allocation (project name, percentage, rounded corners)
-   - Multi-week allocation (connected cells with rounded edges, duration badge on last cell)
-   - Split allocation cell (horizontal layout: project name left, percentage badge right, stacked vertically)
-   - Oncall cell (purple with diagonal stripes, phone icon)
-   - Unallocated cell (red tint with dashed lines)
-   - Before-start-date cell (hash overlay, warning icon)
-
-3. **Implement multi-week project connections** ⚠️ (Deferred to Phase 6: Editing)
-   - Detect consecutive weeks with same project for an engineer
-   - First cell: rounded left edge, square right
-   - Middle cells: square all edges, subtle connecting lines
-   - Last cell: square left edge, rounded right, duration badge (e.g., "3w")
-   - Hover any cell highlights entire connected series
-   - Slightly darker background for visual cohesion
-   - NOTE: Component structure supports this, but automatic detection will be added in editing phase
-
-4. **Render grid from state data** ✅
-   - Generate weeks for Q1 2025 (13 weeks) as columns
-   - Map allocations to grid cells
-   - Apply project colors from enum
-   - Calculate sprint numbers and groupings
-
-5. **Add row header capacity indicators** ✅ (Reference: `docs/ui-design.md` section 5.3)
-   - Show allocated vs capacity for each engineer (e.g., "11.5 / 12 weeks")
+2. **Redesign column headers** (engineer columns)
+   - Engineer name + role badge
+   - Capacity indicator (allocated / capacity weeks)
    - Mini progress bar (80px width, 4px height)
-   - Color code based on utilization:
-     - Success: within 0.5 weeks
-     - Warning: 0.5-1 week off
-     - Error: >1 week off
+   - Vertical layout stacking these elements
+   - Sticky on vertical scroll (z-index: 2)
 
-6. **Implement scroll behavior** ✅
-   - Horizontal scroll for many weeks (>13)
-   - Vertical scroll for many engineers (>6)
-   - Column headers sticky on vertical scroll
-   - Row headers sticky on horizontal scroll
+3. **Redesign row headers** (week rows)
+   - Week date (e.g., "Jan 6")
+   - Week progress (e.g., "Wk 1/13")
+   - Sprint label (e.g., "Sprint 1") on first week of sprint
+   - Width: 120px (narrower than engineer headers were)
+   - Sticky on horizontal scroll (z-index: 1)
 
-### Acceptance Criteria
-- [x] Application builds successfully
-- [x] Allocation grid displays with sample data (weeks horizontal, engineers vertical)
-- [x] All cell variants render correctly (empty, single-week, split, oncall, before-start)
-- [ ] Multi-week projects show as connected cells with duration badge (deferred to Phase 6)
-- [x] Split cells show horizontal layout (project name left, percentage badge right, stacked top/bottom)
-- [x] Cell dimensions are 150px × 120px for optimal text display
-- [x] Project colors apply correctly
-- [x] Sprint numbers and week dates calculate correctly
-- [x] VERTICAL sprint separators appear every 2 weeks
-- [x] Engineer capacity indicators show correct colors and progress bars
-- [x] Horizontal scroll works for many weeks
-- [x] Sticky headers work correctly (columns on vertical scroll, rows on horizontal scroll)
+4. **Update sprint separators**
+   - Change from VERTICAL borders (border-left) to HORIZONTAL borders (border-top)
+   - Apply to row headers and cells
+   - Still every 2 weeks (check if week.is_sprint_start())
+   - CSS class: `.grid-week-row.sprint-separator`
 
-### Manual Testing
-**Run:** `dx serve`
-1. Switch to Allocation view ✅
-2. Verify grid structure: ✅
-   - Weeks flow horizontally across top
-   - Engineers listed vertically on left
-   - Sprint numbers span 2 week columns
-3. Check grid cell variants: ✅
-   - Empty cell with "+" icon
-   - Single week allocated cell with project name
-   - Split cell with horizontal layout (project name left, percentage right, stacked top/bottom)
-   - Oncall cell with purple styling
-   - Before-start cell with hash pattern
-4. Verify VERTICAL sprint separators appear every 2 weeks ✅
-5. Check engineer capacity colors and progress bars in row headers ✅
-6. Test horizontal scroll for many weeks ✅
-7. Verify sticky headers work (scroll both directions) ✅
+5. **Update grid cell dimensions**
+   - Maintain aspect ratio and readability
+   - Now: 180px width (engineer column), 120px height (week row)
+   - Text layout remains the same
 
-### Documentation Updates
-- [x] Document grid cell state logic in code comments
-- [x] Document week/sprint calculation logic
-- [x] Create `docs/adrs/ADR-003-grid-layout.md` - Document CSS Grid choice, timeline orientation (horizontal weeks), sticky header approach, alternatives considered
-- [x] Create `docs/grid-architecture.md` - Document grid rendering pipeline, cell state machine, multi-week detection strategy, performance considerations
+6. **Update CSS** (assets/styling/main.css)
+   - `.grid-header-corner`: Update z-index layering
+   - `.grid-engineer-header`: New class for engineer column headers (replaces `.grid-week-header`)
+   - `.grid-week-row-header`: New class for week row headers (replaces `.grid-row-header`)
+   - `.sprint-separator`: Change from `border-left` to `border-top`
+   - Update sticky positioning classes
+   - Adjust grid container scrolling behavior
 
-### Implementation Notes
-- Created `GridCell` component with variants: Empty, SingleWeek, MultiWeek, Split, Oncall (src/components/ui/grid_cell.rs)
-- Implemented `AllocationView` with full grid rendering (src/components/views/allocation_view.rs)
-- Added comprehensive CSS for all grid elements, sticky headers, and cell variants (assets/styling/main.css)
-- Multi-week project detection deferred to Phase 6 (editing) - component structure supports it
-- Grid uses CSS Grid with dynamic column calculation based on week count
-- Sticky headers implemented with z-index layering (corner: 3, column headers: 2, row headers: 1)
-- Capacity indicators use color-coded text and progress bars
-- **UI Refinements (Post-Phase 4):**
-  - Increased cell dimensions from 120px × 96px to 150px × 120px for better readability (maintaining 1.25:1 ratio)
-  - Optimized split cell layout: horizontal design with project name on left, percentage badge on right, two sections stacked vertically
-  - Improved text rendering with 3-line clamp and left-aligned text in split cells
-  - Adjusted grid template columns from 120px to 150px per week
-
----
-
-## Phase 5: Technical Projects View
-**Goal:** Implement the Technical Projects view with side panel
-
-### Tasks
-1. **Create side panel component** (Reference: `docs/component-reference.md` section 9, `docs/mockup.html` lines 1234-1270)
-   - Filter section with checkboxes (All, On Track, At Risk, No Link)
-   - Sort section with radio buttons (Roadmap, Status, Allocation)
-   - Collapsible functionality
-   - 320px width with border
-
-2. **Build Technical Projects table**
-   - Technical project name with color dot
-   - Linked roadmap project
-   - Estimated weeks
-   - Allocated weeks (with status badge)
-   - Status text
-   - Grid layout with side panel
-
-3. **Implement filter logic**
-   - Filter by status (on track, at risk)
-   - Filter by roadmap link presence
-   - "All Projects" checkbox
-
-4. **Implement sort logic**
-   - Sort by roadmap project
-   - Sort by status
-   - Sort by allocation
-
-5. **Add search functionality**
-   - Search technical projects by name
-   - "Add Technical Project" button (placeholder)
+7. **Update helper functions**
+   - No changes needed to `calculate_cell_variant()` - still works the same
+   - Allocation map lookup stays (engineer_id, week_start) - no change needed
 
 ### Acceptance Criteria
 - [x] Application builds successfully
-- [x] Technical view displays with side panel and table
-- [x] Side panel filters work correctly
-- [x] Sort options reorder table
-- [x] Search filters technical projects
-- [x] Table shows correct data from state
-- [x] Status badges match allocation status
-- [x] Layout matches design spec (320px panel, flex layout)
-
-### Manual Testing
-**Run:** `dx serve`
-1. Switch to Technical view ✅
-2. Verify side panel displays on left ✅
-3. Test each filter option: ✅
-   - All Projects
-   - On Track
-   - At Risk
-   - No Roadmap Link
-4. Test each sort option ✅
-5. Test search functionality ✅
-6. Verify table data matches state ✅
-7. Check status badge colors ✅
-
-### Documentation Updates
-- [x] Document filter/sort logic in code comments
-
-### Implementation Notes
-- Created side panel component with filter and sort sections (src/components/views/technical_view.rs)
-- Implemented all filter options using HashSet for multi-select functionality
-- Implemented sorting with three sort modes (Roadmap, Status, Allocation)
-- Added search functionality with real-time filtering
-- Created comprehensive CSS for side panel, buttons, and search input (assets/styling/main.css)
-- Added BadgeType::Info variant for "Not Started" status
-- **UI Improvements:**
-  - Enhanced search bar visibility with better contrast and hover/focus states
-  - Added proper button styling with hover and active states
-  - Created view-header layout with proper spacing
-  - Changed error status text from "Over Allocated" to "Critical" for accuracy
-  - Search input: 40px height, `--bg-secondary` background, subtle border with hover effect
-  - Primary button: Blue with hover lift effect and shadow transitions
-
----
-
-## Phase 6: Interactive Allocation Grid (Paintbrush Mode)
-**Goal:** Add interactive allocation editing with paintbrush mode
-
-### Tasks
-1. **Implement paintbrush mode toggle** (Reference: `docs/component-reference.md` section 7, `docs/ui-design.md` section 6.1)
-   - Toggle button (OFF/ON states)
-   - Project selector dropdown
-   - Cursor style change when active
-   - Visual feedback (glow effect when ON)
-
-2. **Add project selector dropdown** (Reference: `docs/ui-design.md` section 5.4)
-   - List all technical projects
-   - Show project color dot
-   - Show allocated weeks count
-   - Oncall option at bottom
-   - Search within dropdown
-
-3. **Implement click-to-allocate**
-   - Click empty cell → assign selected project at 100%
-   - Visual feedback (success glow animation)
-   - Update state
-   - Recalculate capacity
-
-4. **Implement click-and-drag painting**
-   - Mouse down → start paint
-   - Mouse move → highlight cells in drag path
-   - Mouse up → commit allocations
-   - Drag path visual feedback
-
-5. **Add keyboard shortcuts** (Reference: `docs/ui-design.md` section 6.3)
-   - Esc: Exit paintbrush mode
-   - Arrow keys: Navigate grid
-   - Tab/Shift+Tab: Move between cells
-
-6. **Implement cell validation**
-   - Prevent allocation to already-full cells
-   - Show error feedback (shake animation, red border)
-   - Validate against project start dates
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] Paintbrush toggle switches states correctly
-- [ ] Project selector appears when paintbrush ON
-- [ ] Clicking empty cell allocates selected project
-- [ ] Drag painting works across multiple cells
-- [ ] Esc key exits paintbrush mode
-- [ ] Invalid allocations show error feedback
-- [ ] State updates reflect in capacity indicators
-- [ ] All tests pass
+- [x] Grid displays with engineers as columns, weeks as rows
+- [x] Vertical scrolling works smoothly for many weeks
+- [x] Column headers (engineers) stick to top on vertical scroll
+- [x] Row headers (weeks) stick to left on horizontal scroll
+- [x] Sprint separators appear as HORIZONTAL lines every 2 weeks
+- [x] Capacity indicators display correctly in engineer column headers
+- [x] Cell allocation lookups work correctly
+- [x] All cell variants render properly
+- [x] Paintbrush mode works with new layout
 
 ### Manual Testing
 **Run:** `dx serve`
 1. Switch to Allocation view
-2. Click "Paintbrush Mode: OFF" → should turn ON with blue styling
-3. Select a project from dropdown
-4. Click an empty cell → should allocate project
-5. Click and drag across multiple cells → should paint all
-6. Try clicking a full cell → should show error
-7. Press Esc → should exit paintbrush mode
-8. Verify capacity indicators update after allocation
+2. Verify grid orientation:
+   - Engineers listed horizontally across top
+   - Weeks listed vertically down left side
+   - Sprint numbers span 2 week rows
+3. Test vertical scrolling:
+   - Scroll down through weeks
+   - Verify engineer headers stay visible (sticky top)
+4. Test horizontal scrolling (if many engineers):
+   - Scroll right through engineers
+   - Verify week headers stay visible (sticky left)
+5. Check capacity indicators in engineer column headers
+6. Verify HORIZONTAL sprint separators every 2 weeks
+7. Test paintbrush mode with new layout
+8. Verify cell hover and click interactions work
 
 ### Documentation Updates
-- [ ] Document paintbrush mode interaction patterns
-- [ ] Document state mutation patterns in code
-- [ ] Create `docs/adrs/ADR-004-paintbrush-interaction.md` - Document paintbrush mode design, click-and-drag vs alternatives, project selector UX decisions
-- [ ] Create `docs/interaction-patterns.md` - Document all interaction modes (paintbrush, context menu, drag-drop), keyboard shortcuts, user feedback patterns
+- [ ] Update `docs/adrs/ADR-003-grid-layout.md` with rotation decision and rationale
+- [ ] Update `docs/ui-design.md` section 7.3 with new grid orientation
+- [ ] Document layout rotation in code comments
 
 ---
 
-## Phase 7: Context Menu & Split Allocation
-**Goal:** Add right-click context menu and split allocation dialog
+## Phase 6.6: UI/UX Refinements (Floating FAB, Visual Polish) 🔄 IN PROGRESS
+**Goal:** Replace horizontal paintbrush bar with floating action button, improve visual hierarchy and polish
+
+**Status:** Core FAB and panel components complete. Old paintbrush controls still need removal.
+
+**Rationale:**
+- Current horizontal paintbrush bar takes 80-100px vertical space (~15-20% of viewport)
+- Visually blends with grid headers causing hierarchy confusion
+- User feedback: "paintbrush header attaches to table header making it kind of confusing"
+- Floating action pattern is more modern, space-efficient, and app-like
+
+### Design Analysis
+
+**Current Issues:**
+1. **Space inefficiency**: Paintbrush controls permanently visible when enabled
+2. **Visual hierarchy**: No clear separation between mode controls and grid data
+3. **Workflow friction**: Toggle → Select → Paint requires 3+ interactions
+4. **Limited discoverability**: Small dropdown doesn't use available screen space
+
+**Solution: Floating Action Button (FAB) + Slide-out Panel**
+- FAB fixed in bottom-right (64×64px, always accessible)
+- Click FAB → Project selector panel slides from right (340px wide)
+- Panel shows: search, all projects with colors + allocated weeks, Oncall option
+- Unified UI for both "Paintbrush Mode" and "Assign Project" (context menu)
+- Panel only appears when needed (reclaims 80-100px vertical space)
+
+### Tasks - Priority 1: Critical (Implement First)
+
+#### 1. **Create Floating Action Button Component** ✅ COMPLETE
+**Files:** src/components/ui/floating_fab.rs (new), src/components/ui/mod.rs
+
+- [x] Create `FloatingFab` component
+- [x] Position: fixed, bottom: 32px, right: 32px
+- [x] Size: 56×56px circle (adjusted from 64px for better proportions)
+- [x] Background: var(--bg-overlay) with subtle primary blue hints (design system compliant)
+- [x] Hover: scale(1.05), box-shadow increase
+- [x] Active state: background changes to selected project color via color-mix
+- [x] Click handler: toggle project panel visibility
+- [x] Z-index: 1000
+- [x] Icon: 🎨 emoji (updated from 🖌️)
+
+**CSS:**
+```css
+.floating-paintbrush-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--primary-50);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.floating-paintbrush-fab.active {
+  background: var(--project-color);
+  animation: pulse 2s infinite;
+}
+```
+
+#### 2. **Create Floating Project Panel Component** ✅ COMPLETE
+**Files:** src/components/ui/floating_project_panel.rs (new), src/components/ui/mod.rs
+
+- [x] Create `FloatingProjectPanel` component
+- [x] Position: fixed, top: 80px, right: 32px
+- [x] Size: 340px width, max-height: calc(100vh - 120px)
+- [x] Background: var(--bg-secondary), border, rounded corners (16px)
+- [x] Box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6)
+- [x] Backdrop-filter: blur(20px) for glassmorphism effect
+- [x] Slide-in animation from right (slide-in-right 0.3s)
+- [x] Z-index: 999 (below FAB)
+- [x] Contains:
+  - Search input at top
+  - Scrollable project list (all projects)
+  - Each project shows: color dot, name, allocated weeks
+  - Selected project highlighted with primary color
+  - Click project → selects project for paintbrush mode
+  - Clear option to deselect
+- [x] Click outside → closes panel
+- [x] **Added:** Collapse/expand functionality (›› / ‹‹ buttons) for narrow windows
+- [x] **Fixed:** Clear button border displays completely
+- [x] **Fixed:** Collapse button properly centered between search and edge
+
+**CSS:**
+```css
+.floating-project-panel {
+  position: fixed;
+  top: 80px;
+  right: 32px;
+  width: 340px;
+  max-height: calc(100vh - 120px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-emphasis);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  z-index: 999;
+  animation: slide-in-right 0.3s ease-out;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+```
+
+#### 3. **Remove Horizontal Paintbrush Controls** ✅ COMPLETE
+**Files:** src/components/views/paintbrush.rs, assets/styling/main.css
+
+- [x] Remove `PaintbrushControls` component
+- [x] Remove `ProjectSelector` component
+- [x] Keep paintbrush mode state logic (paintbrush_active, selected_project)
+- [x] Keep allocation logic (allocate_project_to_cell function)
+- [x] Remove horizontal controls container CSS (378 lines removed)
+- [x] Clean up unused imports
+
+#### 4. **Integrate FAB + Panel into Allocation View**
+**Files:** src/components/views/allocation_view.rs
+
+- [ ] Add `panel_visible` signal (controls panel visibility)
+- [ ] Import FloatingFab and FloatingProjectPanel components
+- [ ] Render FloatingFab at bottom of RSX (always visible)
+- [ ] Render FloatingProjectPanel conditionally (when panel_visible)
+- [ ] Wire up FAB click → toggle panel_visible
+- [ ] Wire up project selection:
+  - From panel → enters paintbrush mode with selected project
+  - From context menu "Assign Project" → opens panel, selection assigns to cell
+- [ ] Add panel close handlers (click outside, Esc key)
+- [ ] Update paintbrush mode to show selected project color in FAB
+
+#### 5. **Unified Project Selection Flow**
+**Files:** src/components/views/allocation_view.rs
+
+**Two modes:**
+1. **Paintbrush Mode** (FAB click):
+   - Click FAB → panel opens
+   - Click project → paintbrush_active = true, selected_project = project
+   - Panel stays open, FAB shows project color
+   - Click cells to paint
+   - Esc or FAB click → exit paintbrush mode, close panel
+
+2. **Direct Assignment** (Context menu):
+   - Right-click cell → "Assign Project"
+   - Panel opens with `assign_mode = true`
+   - Click project → assigns to cell immediately, closes panel
+   - No paintbrush mode activation
+
+- [ ] Add `assign_mode` signal (differentiates paintbrush vs direct assign)
+- [ ] Update panel project click handler to check assign_mode
+- [ ] If assign_mode: create allocation, close panel
+- [ ] If paintbrush mode: set selected_project, keep panel open
+
+### Code Quality Improvements ✅ COMPLETE
+
+**Performance Optimizations:**
+- [x] Fixed search filter inefficiency - cached `to_lowercase()` to avoid redundant allocations
+- [x] Removed duplicate color resolution logic across components
+- [x] Added `TechnicalProject::get_color(&Plan)` helper method for DRY code
+
+**Validation & Correctness:**
+- [x] Added project existence validation in `allocate_project_to_cell()`
+- [x] Function now correctly returns `false` when project doesn't exist
+- [x] Removed unused `ProjectColor` imports
+
+**Files Modified:**
+- src/models/plan.rs - Added `get_color()` helper
+- src/components/ui/floating_project_panel.rs - Performance & refactoring
+- src/components/views/paintbrush.rs - Performance, validation & refactoring
+
+### Tasks - Priority 2: Important (Do Soon)
+
+#### 6. **Improve Sprint Separator Visibility**
+**Files:** assets/styling/main.css
+
+**Issue:** Current 2px dashed border is too subtle, hard to see sprint boundaries
+
+- [ ] Change `.grid-week-row-header.sprint-separator` border-top from 2px dashed to 3px dashed
+- [ ] Use var(--border-emphasis) instead of var(--border-default) for higher contrast
+- [ ] Add subtle background color to sprint start rows: background: var(--bg-tertiary)
+- [ ] Update `.grid-cell.sprint-separator` similarly
+- [ ] Test visibility with different monitor brightness levels
+
+```css
+.grid-week-row-header.sprint-separator {
+  border-top: 3px dashed var(--border-emphasis);
+  background: var(--bg-tertiary);
+  padding-top: calc(var(--space-sm) + 4px);
+}
+
+.grid-cell.sprint-separator {
+  border-top: 3px dashed var(--border-emphasis);
+  background: color-mix(in srgb, var(--bg-tertiary) 50%, transparent);
+}
+```
+
+#### 7. **Add Row/Column Hover Highlights**
+**Files:** assets/styling/main.css
+
+**Goal:** Help users understand which engineer + week they're interacting with
+
+- [ ] Add box-shadow on cell hover that highlights entire row and column
+- [ ] Use rgba(10, 132, 255, 0.05) for subtle blue tint
+- [ ] Apply to both empty and allocated cells
+- [ ] Ensure doesn't conflict with paintbrush mode cursor
+- [ ] Test with different cell variants (allocated, split, oncall)
+
+```css
+.grid-cell:hover {
+  box-shadow:
+    0 0 0 2px var(--primary-50),
+    -2000px 0 0 0 rgba(10, 132, 255, 0.05),
+    0 -2000px 2000px 0 rgba(10, 132, 255, 0.05);
+  z-index: 1;
+}
+```
+
+#### 8. **Increase Capacity Text Readability**
+**Files:** assets/styling/main.css
+
+**Issue:** Capacity text (4.0 / 12 w) is small, progress bar is subtle
+
+- [ ] Increase `.capacity-text` font-size from 11-12px to 13px
+- [ ] Increase font-weight to 600 (semi-bold)
+- [ ] Increase `.capacity-bar` height from 4px to 6px
+- [ ] Increase `.capacity-bar` width from 80px to 100px
+- [ ] Add subtle background tint to over-allocated engineer headers
+
+```css
+.capacity-text {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.capacity-bar {
+  width: 100px;
+  height: 6px;
+}
+
+.grid-engineer-header.over-allocated {
+  background: rgba(255, 69, 58, 0.05);
+}
+```
+
+#### 9. **Paintbrush Mode Visual Feedback**
+**Files:** assets/styling/main.css
+
+**Goal:** Clear indication when paintbrush mode is active
+
+- [ ] Add glow effect to FAB when paintbrush mode is active
+- [ ] Show selected project color in FAB background
+- [ ] Add pulse animation to FAB (2s infinite)
+- [ ] Keep crosshair cursor on grid cells (already done)
+- [ ] Add subtle border to panel when in paintbrush mode
+
+```css
+.floating-paintbrush-fab.active {
+  background: var(--project-color);
+  box-shadow: 0 0 0 4px rgba(var(--project-color-rgb), 0.2);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }
+  50% { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 4px var(--primary-50); }
+}
+```
+
+### Tasks - Priority 3: Polish (Nice to Have)
+
+#### 10. **Empty Cell Hover Refinements**
+**Files:** assets/styling/main.css
+
+- [ ] Hide "+" icon by default (opacity: 0)
+- [ ] Show "+" only on hover (opacity: 1)
+- [ ] In paintbrush mode, show ghost preview of selected project on hover
+- [ ] Add subtle scale animation on hover
+
+```css
+.grid-cell-empty .empty-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.grid-cell-empty:hover .empty-icon {
+  opacity: 1;
+}
+```
+
+#### 11. **Cell Transition Animations**
+**Files:** assets/styling/main.css
+
+- [ ] Add smooth transitions for cell background color changes
+- [ ] Add scale animation when cell is allocated
+- [ ] Add fade-in for newly created allocations
+- [ ] Keep existing success-pulse animation for paintbrush allocations
+
+#### 12. **Panel Search Functionality**
+**Files:** src/components/ui/floating_project_panel.rs
+
+- [ ] Add search input at top of panel
+- [ ] Filter projects by name as user types
+- [ ] Highlight matching text in project names
+- [ ] Show "No results" message when no matches
+- [ ] Clear search on Esc key
+
+### Acceptance Criteria
+- [x] Application builds successfully
+- [x] Floating FAB appears in bottom-right corner
+- [x] FAB click opens project selector panel from right side
+- [x] Panel shows all projects with color dots and allocated weeks
+- [x] Panel includes search functionality
+- [x] Click project in panel selects it for paintbrush mode
+- [x] FAB shows selected project color when paintbrush mode active
+- [x] Panel includes collapse/expand functionality for narrow windows
+- [x] Clear button displays complete border
+- [x] Collapse button properly centered
+- [x] Click outside panel closes it
+- [x] All existing grid functionality still works
+- [x] Pre-commit checks pass (fmt, clippy, tests, audit)
+- [ ] Horizontal paintbrush bar completely removed (80-100px space reclaimed) - **TODO**
+- [ ] Context menu "Assign Project" opens same panel - **TODO**
+- [ ] Sprint separators clearly visible (3px dashed, higher contrast) - **TODO**
+- [ ] Row/column hover highlights work correctly - **TODO**
+- [ ] Capacity text is readable (13px, semi-bold) - **TODO**
+- [ ] Over-allocated engineers have subtle red background tint - **TODO**
+- [ ] Paintbrush mode has clear visual feedback (FAB glow, pulse) - **TODO**
+- [ ] Esc key closes panel and exits paintbrush mode - **TODO**
+
+### Manual Testing
+**Run:** `dx serve`
+
+1. **FAB + Panel**:
+   - Verify FAB appears in bottom-right corner
+   - Click FAB → panel slides in from right
+   - Verify panel shows all projects with colors
+   - Search for project → verify filtering works
+   - Click outside panel → verify it closes
+
+2. **Paintbrush Mode via FAB**:
+   - Click FAB → panel opens
+   - Click "ML Pipeline Optimization" → verify paintbrush mode activates
+   - Verify FAB background changes to blue (project color)
+   - Verify FAB has pulse animation
+   - Click cells → verify allocation works
+   - Press Esc → verify paintbrush mode exits, panel closes
+
+3. **Direct Assignment via Context Menu**:
+   - Right-click empty cell → "Assign Project"
+   - Verify panel opens
+   - Click "Auth Service Refactor" → verify cell assigned immediately
+   - Verify panel closes after assignment
+   - Verify paintbrush mode NOT activated
+
+4. **Visual Polish**:
+   - Hover over cells → verify row/column highlights appear
+   - Check sprint separators → verify 3px dashed lines visible
+   - Check engineer headers → verify capacity text readable
+   - Check over-allocated engineer (Dave Roberts) → verify subtle red tint
+   - Hover empty cell → verify "+" appears on hover only
+
+5. **Space Reclamation**:
+   - Compare grid visible area before/after (should gain ~80-100px)
+   - Verify more weeks visible without scrolling
+   - Verify no horizontal controls bar above grid
+
+### Documentation Updates
+- [ ] Create `docs/adrs/ADR-004-floating-fab-pattern.md` documenting FAB decision
+- [ ] Update `docs/ui-design.md` section 6 with FAB specifications
+- [ ] Update `docs/component-reference.md` with FloatingFab and FloatingProjectPanel
+- [ ] Document unified project selection flow (paintbrush vs direct assign)
+
+---
+
+## Phase 7: Context Menu & Advanced Interactions ⏸️ PARTIALLY COMPLETE
+**Goal:** Add right-click context menu, assignment modals, and improved keyboard interactions
+
+### Current Status
+**Completed:**
+- ✅ `ContextMenu` component created (src/components/ui/context_menu.rs)
+- ✅ `SplitAllocationModal` component created (src/components/ui/split_modal.rs)
+- ✅ `AssignProjectModal` component created (src/components/ui/assign_project_modal.rs)
+- ✅ Basic keyboard shortcuts (Esc, Delete)
+- ✅ Context menu action handlers partially implemented
+
+**Remaining:**
+- ❌ Complete AssignProjectModal integration and handlers
+- ❌ Update copy/paste to work with hover + keyboard only (no context menu)
+- ❌ Add keybindings help overlay/tooltip
+- ❌ Fix split modal text overflow in project dropdowns
+- ❌ Improve split preview visual clarity (color-coded sections)
+- ❌ Add "Edit Split" option for existing split cells
+- ❌ Wire up cell hover to set `focused_cell` for keyboard ops
+- ❌ Add comprehensive CSS for all modals
+- ❌ Render modals in allocation_view.rs
+- ❌ Test all interactions
 
 ### Tasks
-1. **Implement context menu** (Reference: `docs/ui-design.md` section 5.4)
-   - Right-click on grid cell → show menu
-   - Menu items:
-     - Assign Project...
-     - Split Allocation...
-     - Clear Assignment
-     - Copy Assignment (Cmd+C)
-     - Paste Assignment (Cmd+V)
-   - Position menu near cursor
-   - Close on click outside
 
-2. **Build split allocation modal** (Reference: `docs/ui-design.md` section 5.4)
-   - Modal overlay with backdrop blur
-   - Project A selector with percentage slider
-   - Visual preview bar showing VERTICAL split (matches cell design)
-   - Project B selector with auto-calculated percentage
-   - Validation: total must equal 100%
-   - Apply/Cancel buttons
+#### 1. Complete AssignProjectModal Integration
+**Files:** src/components/views/allocation_view.rs, src/components/ui/assign_project_modal.rs
 
-3. **Implement copy/paste allocation**
-   - Store allocation in clipboard state
-   - Keyboard shortcuts (Cmd/Ctrl+C, Cmd/Ctrl+V)
-   - Visual feedback for paste
+- [x] Create AssignProjectModal component with project list
+- [ ] Add modal state (assign_modal_visible, assign_project_id)
+- [ ] Wire up "Assign Project" context menu action to open modal
+- [ ] Implement project selection handler
+- [ ] Implement oncall selection handler
+- [ ] Implement apply handler (create Allocation with selected project)
+- [ ] Implement cancel handler
+- [ ] Render AssignProjectModal in allocation_view RSX
 
-4. **Add clear assignment functionality**
-   - Remove allocation from cell
-   - Update state and capacity
-   - Visual feedback (fade out animation)
+#### 2. Improve Copy/Paste UX (Hover-Based)
+**Files:** src/components/views/allocation_view.rs
 
-5. **Implement delete/backspace key**
-   - Delete key clears selected cell
-   - Works on focused cell
+**Current Issue:** Copy/paste requires context menu, but should work with hover + keyboard only
+
+- [ ] Add `focused_cell` signal to track hovered cell
+- [ ] Add `onmouseenter` handler to grid cells to set `focused_cell`
+- [ ] Add `onmouseleave` handler to clear `focused_cell` (debounced)
+- [ ] Update Cmd/Ctrl+C handler to use `focused_cell` instead of `context_menu_cell`
+- [ ] Update Cmd/Ctrl+V handler to use `focused_cell` instead of `context_menu_cell`
+- [ ] Update Delete/Backspace handler to use `focused_cell`
+- [ ] Remove copy/paste from context menu (keep only: Assign, Split/Edit Split, Clear)
+- [ ] Add visual indicator for focused cell (subtle border or glow)
+
+#### 3. Add Keybindings Help Overlay
+**Files:** src/components/ui/keybindings_overlay.rs (new), src/components/views/allocation_view.rs
+
+- [ ] Create KeybindingsOverlay component
+- [ ] Design overlay layout (floating panel, 2-column grid)
+- [ ] Add all keyboard shortcuts with descriptions:
+  - **General:** Esc (close modals/exit paintbrush), ? (toggle this help)
+  - **Allocation:** Cmd/Ctrl+C (copy hovered cell), Cmd/Ctrl+V (paste to hovered cell)
+  - **Editing:** Delete/Backspace (clear hovered cell)
+  - **Paintbrush:** Esc (exit mode), Click (allocate), Drag (paint multiple)
+- [ ] Add toggle state (show/hide with `?` key)
+- [ ] Add keyboard shortcut to toggle (? key)
+- [ ] Position in bottom-right corner with slide-in animation
+- [ ] Add semi-transparent backdrop
+- [ ] Style with design tokens
+
+#### 4. Fix Split Modal Text Overflow
+**Files:** assets/styling/main.css
+
+**Issue:** Project names in dropdowns can overflow their containers
+
+- [ ] Add text-overflow CSS to `.project-dropdown option`
+- [ ] Set max-width on dropdown
+- [ ] Add ellipsis for long project names
+- [ ] Ensure percentage displays don't get cut off
+- [ ] Add tooltip on hover showing full project name (optional)
+
+#### 5. Improve Split Preview Visual Clarity
+**Files:** assets/styling/main.css, src/components/ui/split_modal.rs
+
+**Issue:** Preview bar doesn't clearly show which color belongs to which project
+
+- [ ] Update `.split-preview-project1` and `.split-preview-project2` backgrounds
+- [ ] Use actual project colors from selected projects (pass as props)
+- [ ] Add project names inside preview sections
+- [ ] Increase opacity from 0.3 to 0.5-0.6
+- [ ] Add border between the two sections
+- [ ] Consider vertical stripes pattern to differentiate from solid cells
+
+#### 6. Add "Edit Split" Context Menu Option
+**Files:** src/components/ui/context_menu.rs, src/components/views/allocation_view.rs
+
+- [x] Add `EditSplit` to `MenuAction` enum
+- [x] Update ContextMenu to show "Edit Split Allocation..." when cell is already split
+- [ ] Pass `is_split` prop to ContextMenu (check if allocation.assignments.len() == 2)
+- [ ] Handle EditSplit action (pre-fill modal with current split percentages)
+- [ ] Update context menu render in allocation_view.rs
+
+#### 7. Wire Up Cell Hover for Focused State
+**Files:** src/components/views/allocation_view.rs
+
+- [ ] Add `onmouseenter` to grid cell wrapper div
+- [ ] Set `focused_cell` to (engineer_id, week_start)
+- [ ] Add `onmouseleave` to clear `focused_cell` after 100ms delay
+- [ ] Add CSS class for focused cell visual feedback
+- [ ] Ensure paintbrush mode doesn't conflict with focus state
+
+#### 8. Add Modal CSS
+**Files:** assets/styling/main.css
+
+- [ ] Add `.assign-project-modal` specific styles
+- [ ] Add `.assign-project-list` grid layout
+- [ ] Add `.assign-project-option` button styles
+- [ ] Add selected state styles
+- [ ] Ensure modal widths are appropriate (400-500px)
+- [ ] Add animations (fade-in, scale)
+- [ ] Ensure backdrop blur works correctly
+
+#### 9. Test All Interactions
+- [ ] Test AssignProjectModal:
+  - Right-click → Assign Project
+  - Select project from list
+  - Select Oncall
+  - Apply assignment
+  - Cancel
+- [ ] Test SplitAllocationModal:
+  - Right-click → Split Allocation
+  - Select two different projects
+  - Adjust slider (0-100%)
+  - Verify preview updates with colors
+  - Apply split
+  - Edit existing split (right-click split cell → Edit Split)
+- [ ] Test Copy/Paste:
+  - Hover cell, press Cmd/Ctrl+C
+  - Hover different cell, press Cmd/Ctrl+V
+  - Verify clipboard works across page
+- [ ] Test Delete:
+  - Hover cell, press Delete/Backspace
+  - Verify cell clears
+- [ ] Test Keybindings Help:
+  - Press ? to toggle overlay
+  - Verify all shortcuts listed
+  - Press Esc or ? again to close
+- [ ] Test on both Mac (Cmd) and Windows/Linux (Ctrl)
 
 ### Acceptance Criteria
 - [ ] Application builds successfully
 - [ ] Right-click opens context menu near cursor
-- [ ] Split allocation modal opens and functions correctly
+- [ ] AssignProjectModal opens and assigns projects correctly
+- [ ] SplitAllocationModal opens and creates/edits splits correctly
 - [ ] Percentage slider updates both projects (total = 100%)
-- [ ] Split cells display correctly in grid
-- [ ] Copy/paste works with keyboard shortcuts
-- [ ] Clear assignment removes allocation
-- [ ] Delete/Backspace key clears cell
+- [ ] Split preview shows color-coded sections with project names
+- [ ] Copy/paste works with hover + keyboard only
+- [ ] Delete/Backspace clears hovered cell
+- [ ] Keybindings overlay shows all shortcuts
+- [ ] Project names don't overflow in modals
+- [ ] "Edit Split" option appears for split cells
+- [ ] All keyboard shortcuts work on Mac (Cmd) and Windows/Linux (Ctrl)
+- [ ] Visual feedback for focused/hovered cell
 - [ ] All tests pass
 
-### Manual Testing
-**Run:** `dx serve`
-1. Right-click on an allocated cell → verify menu appears
-2. Click "Split Allocation..."
-   - Select two projects
-   - Adjust slider
-   - Verify preview updates
-   - Click Apply
-   - Verify split cell appears in grid
-3. Test copy/paste:
-   - Right-click cell → Copy Assignment
-   - Right-click empty cell → Paste Assignment
-4. Test clear:
-   - Right-click cell → Clear Assignment
-   - Verify cell becomes empty
-5. Test keyboard delete on focused cell
-
 ### Documentation Updates
-- [ ] Add code comments for modal state management
-- [ ] Document keyboard shortcuts in code comments
-- [ ] Update `docs/interaction-patterns.md` with context menu and split allocation workflows
+- [ ] Document keyboard shortcuts in `docs/keyboard-shortcuts.md`
+- [ ] Update `docs/interaction-patterns.md` with context menu and modal workflows
+- [ ] Add comments explaining hover-based copy/paste UX decision
 
 ---
 
@@ -596,17 +674,17 @@ dx bundle --release
    - Max width 280px
 
 2. **Implement hover delay system**
-   - Show tooltip after 300ms hover
-   - Hide after 100ms mouse leave
+   - Show tooltip after 500ms hover
+   - Hide immediately on mouse leave
    - Cancel on mouse out before delay
 
-3. **Add tooltip content for grid cells** (Reference: `docs/ui-design.md` section 6.4)
+3. **Add tooltip content for grid cells**
    - Project name
    - Linked roadmap project (clickable)
    - Allocation percentage
    - Project progress (X / Y weeks)
    - Status indicator
-   - Hint text ("Click to edit • Right-click for options")
+   - Hint text ("Cmd+C to copy • Delete to clear")
 
 4. **Add tooltip for engineer headers**
    - Engineer name and role
@@ -615,118 +693,32 @@ dx bundle --release
    - Oncall weeks
    - Unallocated weeks
 
-5. **Add tooltip for project table rows**
-   - Project details
-   - Estimates
-   - Allocated breakdown by engineer
-   - Start and launch dates
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] Tooltips appear after 300ms hover
-- [ ] Tooltips disappear after 100ms mouse leave
-- [ ] Tooltip positions correctly near target
-- [ ] Grid cell tooltips show all required info
-- [ ] Engineer header tooltips show capacity breakdown
-- [ ] Project tooltips show assignment details
-- [ ] All tests pass
-
-### Manual Testing
-**Run:** `dx serve`
-1. Hover over allocated grid cell
-   - Wait 300ms → tooltip should appear
-   - Verify all info displays correctly
-   - Move mouse away → tooltip should disappear
-2. Hover over engineer header
-   - Verify capacity breakdown
-   - Check current projects list
-3. Hover over project in table
-   - Verify project details
-4. Test tooltip positioning near screen edges
-
-### Documentation Updates
-- [ ] Document tooltip content templates
-
 ---
 
 ## Phase 9: File Operations (Save/Load)
 **Goal:** Implement JSON-based file persistence
 
 ### Tasks
-1. **Create file menu dropdown** (Reference: `docs/ui-design.md` section 9.1)
+1. **Create file menu dropdown**
    - File menu button (☰ icon)
-   - Dropdown with options:
-     - New Plan (Cmd+N)
-     - Open Plan... (Cmd+O)
-     - Save Plan (Cmd+S)
-     - Save Plan As... (Cmd+Shift+S)
-     - Export to CSV
-     - Export to Excel
-     - Import from CSV
-     - Preferences...
-     - About
+   - Dropdown with options
+   - Keyboard shortcuts (Cmd+S, Cmd+O, etc.)
 
-2. **Implement JSON serialization** (Reference: `docs/ui-design.md` section 9.2)
+2. **Implement JSON serialization**
    - Serialize plan state to JSON
-   - Include version field for future compatibility
+   - Include version field
    - Save quarter config, engineers, projects, allocations
 
 3. **Implement save functionality**
    - Save current plan to file
    - File dialog (platform-specific)
    - Save As with file name input
-   - Auto-save on changes (optional)
 
 4. **Implement load functionality**
    - Open file dialog
    - Load and parse JSON
    - Validate file format
    - Update application state
-   - Handle errors gracefully
-
-5. **Add keyboard shortcuts**
-   - Cmd/Ctrl+N: New plan (confirm if unsaved changes)
-   - Cmd/Ctrl+O: Open plan
-   - Cmd/Ctrl+S: Save plan
-   - Cmd/Ctrl+Shift+S: Save as
-
-6. **Implement "New Plan" dialog**
-   - Confirm if unsaved changes
-   - Reset state to defaults
-   - Allow setting quarter and year
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] File menu dropdown displays all options
-- [ ] Save creates valid JSON file
-- [ ] Load reads JSON and updates state correctly
-- [ ] Keyboard shortcuts work
-- [ ] New plan confirms if unsaved changes
-- [ ] File format validation catches errors
-- [ ] All tests pass
-
-### Manual Testing
-**Run:** `dx serve`
-1. Make changes to allocation grid
-2. Click File menu → Save Plan As...
-   - Choose location and save
-   - Open file in editor → verify JSON structure
-3. Make more changes
-4. Click File menu → Open Plan...
-   - Select saved file
-   - Verify state restores correctly
-5. Test keyboard shortcuts:
-   - Cmd/Ctrl+S: Save
-   - Cmd/Ctrl+O: Open
-   - Cmd/Ctrl+N: New (should confirm)
-6. Test error handling:
-   - Try opening invalid JSON file
-   - Verify error message displays
-
-### Documentation Updates
-- [ ] Create `docs/adrs/ADR-005-file-format.md` - Document JSON choice vs alternatives (YAML, TOML), schema versioning strategy, migration approach
-- [ ] Create `docs/file-format.md` - Document complete JSON schema, field descriptions, versioning, example files
-- [ ] Document keyboard shortcuts in code comments
 
 ---
 
@@ -735,57 +727,9 @@ dx bundle --release
 
 ### Tasks
 1. **Implement CSV export for roadmap projects**
-   - Export columns: Project Name, Eng Est, Sci Est, Total Est, Eng Alloc, Sci Alloc, Total Alloc, Start Date, Launch Date, Notes
-   - File dialog to save location
-   - CSV formatting with proper escaping
-
 2. **Implement CSV export for allocation grid**
-   - Export engineer allocation matrix
-   - Rows: weeks, Columns: engineers
-   - Cell values: project names or percentages
-
 3. **Implement CSV import for projects**
-   - Parse CSV file
-   - Validate headers
-   - Map to project data structure
-   - Handle errors (missing fields, invalid data)
-   - Preview before import
-
 4. **Add export to Excel (optional)**
-   - If feasible, use a library to export XLSX
-   - Otherwise, enhanced CSV with recommended Excel settings
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] Export roadmap projects to CSV creates valid file
-- [ ] Export allocation grid to CSV creates readable matrix
-- [ ] Import CSV validates and creates projects
-- [ ] Import shows preview before applying
-- [ ] Import handles errors gracefully
-- [ ] All tests pass
-
-### Manual Testing
-**Run:** `dx serve`
-1. File menu → Export to CSV
-   - Choose "Roadmap Projects"
-   - Save file
-   - Open in Excel/Sheets → verify formatting
-2. File menu → Export to CSV
-   - Choose "Allocation Grid"
-   - Save file
-   - Open in Excel/Sheets → verify matrix layout
-3. File menu → Import from CSV
-   - Select valid project CSV
-   - Verify preview
-   - Import
-   - Check projects appear in tables
-4. Test error handling:
-   - Import CSV with missing headers
-   - Import CSV with invalid data
-   - Verify error messages
-
-### Documentation Updates
-- [ ] Update `docs/file-format.md` with CSV format specifications (roadmap projects format, allocation grid format, import requirements, validation rules)
 
 ---
 
@@ -793,66 +737,11 @@ dx bundle --release
 **Goal:** Implement user preferences and configuration
 
 ### Tasks
-1. **Create preferences modal** (Reference: `docs/ui-design.md` section 9.3)
-   - General settings:
-     - Sprint start day dropdown (Monday-Sunday)
-     - Sprint length (1-4 weeks)
-     - Default capacity per engineer
-   - Theme settings:
-     - Dark mode (default)
-     - Light mode toggle (placeholder for future)
-   - Grid settings:
-     - Cell width slider
-     - Show sprint separators toggle
-     - Highlight weekends toggle
-   - Notification settings:
-     - Warn on over-allocation toggle
-     - Show capacity alerts toggle
-
+1. **Create preferences modal**
 2. **Implement preferences persistence**
-   - Save preferences to local storage (web) or config file (desktop)
-   - Load on app startup
-   - Apply settings to UI
-
 3. **Add quarter configuration**
-   - Quarter selector updates quarter setting
-   - Start date calculation from quarter
-   - Number of weeks in quarter
-
 4. **Implement sprint start day logic**
-   - Recalculate week dates when start day changes
-   - Update grid display
-
 5. **Add capacity default setting**
-   - Use default when adding new engineers
-   - Allow override per engineer
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] Preferences modal opens from File menu
-- [ ] All preference settings are functional
-- [ ] Preferences persist across app restarts
-- [ ] Sprint start day recalculates dates correctly
-- [ ] Default capacity applies to new engineers
-- [ ] All tests pass
-
-### Manual Testing
-**Run:** `dx serve`
-1. File menu → Preferences
-2. Test each setting:
-   - Change sprint start day → verify grid updates
-   - Change sprint length → verify separators update
-   - Adjust default capacity
-   - Toggle grid settings
-3. Close and reopen app
-   - Verify preferences persist
-4. Add new engineer
-   - Verify default capacity applies
-
-### Documentation Updates
-- [ ] Create `docs/adrs/ADR-006-preferences-storage.md` - Document storage strategy (local storage for web, config file for desktop), format choice, default values approach
-- [ ] Create `docs/preferences.md` - Document all preference settings, defaults, validation rules, storage location per platform
-- [ ] Document preferences format in code comments
 
 ---
 
@@ -861,60 +750,9 @@ dx bundle --release
 
 ### Tasks
 1. **Implement command pattern for state mutations**
-   - Create `Command` trait
-   - Commands:
-     - AllocateCommand
-     - ClearCommand
-     - SplitCommand
-     - PasteCommand
-   - Each command has `execute()` and `undo()`
-
 2. **Add undo/redo stack**
-   - History stack for executed commands
-   - Redo stack for undone commands
-   - Max history size (e.g., 50 operations)
-
-3. **Implement keyboard shortcuts**
-   - Cmd/Ctrl+Z: Undo
-   - Cmd/Ctrl+Shift+Z: Redo
-   - Update menu items (enabled/disabled based on stack)
-
-4. **Add undo/redo buttons (optional)**
-   - Toolbar buttons for undo/redo
-   - Disabled state when stack is empty
-   - Show tooltip with last action
-
-5. **Handle state transitions**
-   - Clear redo stack on new action
-   - Limit history size
-   - Optimize for performance
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] Undo reverses last allocation change
-- [ ] Redo re-applies undone change
-- [ ] Keyboard shortcuts work (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)
-- [ ] History limit prevents memory issues
-- [ ] All tests pass including undo/redo edge cases
-
-### Manual Testing
-**Run:** `dx serve`
-1. Make allocation changes:
-   - Allocate project to cell
-   - Clear cell
-   - Split allocation
-2. Press Cmd/Ctrl+Z multiple times
-   - Verify each action undoes correctly
-3. Press Cmd/Ctrl+Shift+Z
-   - Verify redo works
-4. Make new change after undo
-   - Verify redo stack clears
-5. Make >50 changes
-   - Verify old history is discarded
-
-### Documentation Updates
-- [ ] Create `docs/adrs/ADR-007-undo-redo-pattern.md` - Document command pattern choice, alternatives considered (memento pattern), memory management strategy, history limit decisions
-- [ ] Document command pattern implementation in code comments
+3. **Implement keyboard shortcuts (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)**
+4. **Handle state transitions**
 
 ---
 
@@ -923,64 +761,10 @@ dx bundle --release
 
 ### Tasks
 1. **Implement over-allocation warnings**
-   - Detect when engineer is over-allocated
-   - Show warning icon in capacity indicator
-   - Toast notification when allocation causes over-allocation
-   - Option to proceed or cancel
-
 2. **Add under-allocation alerts**
-   - Detect unallocated weeks for engineers
-   - Show info notification in capacity summary
-   - Highlight unallocated cells in grid
-
 3. **Implement project deadline validation**
-   - Warn when allocating before project start date
-   - Alert if project won't complete by launch date based on current allocation
-   - Show critical path issues
-
 4. **Add save validation**
-   - Check for incomplete data before save
-   - Warn if projects have zero allocation
-   - Confirm if saving plan with errors
-
 5. **Create notification/toast system**
-   - Success messages (green)
-   - Warning messages (orange)
-   - Error messages (red)
-   - Info messages (blue)
-   - Auto-dismiss after timeout
-   - Dismiss on click
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] Over-allocation warnings appear correctly
-- [ ] Under-allocation info displays
-- [ ] Project deadline warnings show
-- [ ] Toast notifications display and auto-dismiss
-- [ ] Save validation catches incomplete data
-- [ ] All tests pass
-
-### Manual Testing
-**Run:** `dx serve`
-1. Over-allocate an engineer
-   - Verify warning appears
-   - Check capacity indicator shows error color
-2. Leave engineer weeks unallocated
-   - Verify info notification
-   - Check unallocated cells are highlighted
-3. Allocate before project start date
-   - Verify warning icon on cell
-   - Check tooltip shows warning
-4. Try to save incomplete plan
-   - Verify validation dialog
-5. Test toast notifications:
-   - Success: save plan
-   - Warning: over-allocation
-   - Error: invalid import
-   - Info: under-allocation
-
-### Documentation Updates
-- [ ] Document validation rules in `docs/validation.md`
 
 ---
 
@@ -988,63 +772,11 @@ dx bundle --release
 **Goal:** Add micro-interactions and polish UI
 
 ### Tasks
-1. **Implement animations** (Reference: `docs/ui-design.md` section 6.5)
-   - Button press: scale 0.98, 150ms
-   - Cell selection: border grow + color shift
-   - Project assignment: success glow (300ms fade)
-   - Drag start: lift shadow + scale 1.02
-   - Dropdown open: fade + slide (250ms)
-   - Modal open: backdrop fade + modal scale spring
-
+1. **Implement animations**
 2. **Add loading states**
-   - Skeleton screens for initial load
-   - Loading spinner for file operations
-   - Progress bar for large imports
-
 3. **Improve hover states**
-   - Smooth transitions on all interactive elements
-   - Consistent timing (150ms)
-   - Visual feedback for clickable elements
-
-4. **Add drag & drop for cells** (Reference: `docs/ui-design.md` section 6.2)
-   - Click cell border to select
-   - Drag to another cell to move
-   - Drag to empty space to delete
-   - Visual feedback: lifted shadow, semi-transparent
-   - Drop target validation: green/red border
-
-5. **Implement capacity dashboard visualization** (Reference: `docs/ui-design.md` section 8.1)
-   - Animated progress bars
-   - Hover shimmer effect on bars
-   - Smooth color transitions
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] All animations use correct timing functions
-- [ ] Loading states appear for async operations
-- [ ] Drag & drop works smoothly
-- [ ] Hover states are consistent across UI
-- [ ] Capacity bars animate smoothly
-- [ ] Performance remains good (60fps)
-- [ ] All tests pass
-
-### Manual Testing
-**Run:** `dx serve`
-1. Test all button press animations
-2. Allocate projects and watch success glow
-3. Test drag & drop:
-   - Drag cell to new location
-   - Drag to invalid target (should show red border)
-   - Drop on valid target
-4. Open/close modals and dropdowns
-   - Verify smooth animations
-5. Hover over interactive elements
-   - Check transition smoothness
-6. Load large plan file
-   - Verify loading state appears
-
-### Documentation Updates
-- [ ] Document animation timing in code comments
+4. **Add drag & drop for cells**
+5. **Implement capacity dashboard visualization**
 
 ---
 
@@ -1053,249 +785,63 @@ dx bundle --release
 
 ### Tasks
 1. **Write unit tests**
-   - Data model tests (validation, calculations)
-   - Utility function tests (date helpers, capacity calcs)
-   - State management tests
-
 2. **Write integration tests**
-   - View switching
-   - Allocation workflow (paintbrush → allocate → save)
-   - File operations (save → load → verify)
-   - Undo/redo scenarios
-
-3. **Add accessibility features** (Reference: `docs/ui-design.md` section 11)
-   - ARIA labels for all interactive elements
-   - Screen reader announcements for state changes
-   - Focus indicators (2px outline, primary-50)
-   - Keyboard navigation for grid
-   - Skip links for large grids
-
-4. **Implement keyboard navigation** (Reference: `docs/ui-design.md` section 6.3)
-   - Tab/Shift+Tab: move between cells
-   - Arrow keys: navigate grid
-   - Enter: open project selector
-   - Cmd/Ctrl+1/2/3: switch views
-   - All other documented shortcuts
-
-5. **Color contrast validation**
-   - Verify all text meets WCAG AA
-   - Test with colorblind simulators
-   - Ensure pattern overlays (not just color) distinguish states
-
-6. **Performance optimization**
-   - Profile and optimize render performance
-   - Virtualize grid rows if >20 weeks
-   - Memoize expensive calculations
-   - Debounce search/filter operations
-
-### Acceptance Criteria
-- [ ] Application builds successfully
-- [ ] All unit tests pass
-- [ ] Integration tests cover main workflows
-- [ ] ARIA labels on all interactive elements
-- [ ] Full keyboard navigation works
-- [ ] Color contrast meets WCAG AA
-- [ ] Performance remains smooth with large data (100+ weeks, 20+ engineers)
-- [ ] Screen reader can navigate and understand UI
-
-### Manual Testing
-**Run:** `dx serve`
-1. Test with keyboard only (no mouse):
-   - Navigate entire app
-   - Switch views
-   - Allocate projects
-   - Open modals
-   - Save/load files
-2. Test with screen reader (VoiceOver/NVDA)
-   - Verify announcements are clear
-   - Check grid navigation
-3. Test with colorblind simulator
-   - Verify status is clear without color
-4. Load large plan (50+ weeks, 15+ engineers)
-   - Verify smooth scrolling and interaction
-
-### Documentation Updates
-- [ ] Add testing guide in `docs/testing.md`
-- [ ] Add keyboard shortcuts reference in `docs/keyboard-shortcuts.md`
+3. **Add accessibility features (ARIA labels, keyboard nav)**
+4. **Color contrast validation**
+5. **Performance optimization**
 
 ---
 
 ## Phase 16: Final Polish & Documentation
-**Goal:** Final refinements, comprehensive documentation, and release preparation
+**Goal:** Final refinements and release preparation
 
 ### Tasks
 1. **Final UI polish**
-   - Review all spacing matches design spec
-   - Verify all colors match design tokens
-   - Check typography consistency
-   - Fix any layout issues on different screen sizes
-
 2. **Cross-platform testing**
-   - Test web build (dx build --platform web)
-   - Test desktop build (dx build --platform desktop)
-   - Test on macOS, Windows, Linux
-
 3. **Performance optimization**
-   - Bundle size optimization
-   - Asset compression
-   - Code splitting if needed
-   - Minimize CSS
-
 4. **Comprehensive documentation**
-   - Complete user guide in README
-   - Architecture documentation
-   - API documentation for components
-   - Contributing guide
-   - Troubleshooting section
-   - Review and finalize all ADRs in `docs/adrs/`
-   - Create `docs/adrs/README.md` index of all architectural decisions
-   - Ensure all technical documentation is complete and cross-referenced
-
 5. **Create example data files**
-   - Sample Q1 2025 plan
-   - Sample Q2 2025 plan
-   - Tutorial walkthrough plan
-
 6. **Record demo video**
-   - Show all major features
-   - Walkthrough typical workflow
-   - Add to README
-
-7. **Prepare release**
-   - Version numbering (1.0.0)
-   - Release notes
-   - Build distributables
-   - Test installation process
-
-### Acceptance Criteria
-- [ ] All builds compile successfully across platforms
-- [ ] All tests pass
-- [ ] Documentation is complete and accurate
-- [ ] Example files load correctly
-- [ ] Demo video shows all features
-- [ ] No known critical bugs
-- [ ] Performance is acceptable on target hardware
-- [ ] Ready for release
-
-### Manual Testing
-**Run:** `dx serve` and `dx build --release`
-1. Complete full workflow from scratch:
-   - Create new plan
-   - Add engineers
-   - Add roadmap projects
-   - Add technical projects
-   - Allocate using paintbrush mode
-   - Split allocations
-   - Verify capacity indicators
-   - Save plan
-   - Load plan
-   - Export CSV
-   - Import CSV
-2. Test on different platforms
-3. Follow user guide step-by-step to verify accuracy
-
-### Documentation Updates
-- [ ] Finalize README with all sections
-- [ ] Create CHANGELOG.md
-- [ ] Write release announcement
-- [ ] Create GitHub releases page
+7. **Prepare release (v1.0.0)**
 
 ---
 
-## Post-Release Enhancements (Future Phases)
-
-These features can be added in future releases:
-
-### Phase 17: Advanced Features (Future)
+## Phase 17: Post-Release Enhancements (Future)
 - Light mode theme
 - Multiple team support
 - Project dependencies and Gantt view
 - Real-time collaboration
 - Integration with JIRA/GitHub
 - Advanced reporting and analytics
-- Export to PDF with visualizations
-- Custom project color picker
-- Templates for common project types
-
-### Phase 18: Mobile Support (Future)
-- Responsive design for tablet (768-1023px)
-- Mobile-optimized views
-- Touch gestures for allocation
-- Simplified mobile interface
 
 ---
 
 ## Development Guidelines
 
 ### Before Starting Each Phase:
-1. Review the relevant sections in `docs/ui-design.md` and `docs/component-reference.md`
-2. Check the `docs/mockup.html` for visual reference
-3. Create a feature branch: `git checkout -b phase-N-description`
-4. Read through all tasks in the phase
+1. Review relevant documentation
+2. Create feature branch
+3. Read through all tasks
 
 ### During Development:
-1. Build frequently: `dx build` should always succeed
-2. Test manually after completing each task
-3. Write tests as you go (don't defer to end)
-4. Keep commits atomic and well-described
-5. Update documentation alongside code changes
+1. Build frequently (`dx build`)
+2. Test manually after each task
+3. Keep commits atomic
+4. Update documentation alongside code
 
 ### After Completing Each Phase:
-1. Run full test suite: `cargo test`
-2. Build release: `dx build --release`
-3. Complete all manual testing steps
+1. Run full test suite
+2. Build release
+3. Complete all manual testing
 4. Check off all acceptance criteria
-5. Update documentation
-6. Request review (when working with team)
-7. Merge to main
-8. Create a git tag: `git tag phase-N-complete`
-
-### Communication:
-After each phase, I will run `dx serve` and test the application. I will provide feedback on:
-- Any bugs or issues found
-- UI/UX suggestions
-- Performance concerns
-- Questions about next phase
-
-**We will not proceed to the next phase until the current phase is complete and approved.**
-
----
-
-## Success Metrics
-
-The project is successful when:
-- ✅ All 16 phases are complete
-- ✅ Application builds without errors on web and desktop
-- ✅ All tests pass
-- ✅ Can create, save, and load a full quarterly plan
-- ✅ Allocation grid is fully interactive
-- ✅ Validation and warnings work correctly
-- ✅ Keyboard navigation and accessibility features work
-- ✅ Documentation is complete and accurate
-- ✅ Performance is smooth with realistic data sizes
-- ✅ UI matches design specification
-
----
-
-## Estimated Timeline
-
-Each phase is designed to be a focused unit of work:
-- **Phases 1-5**: Foundation (core views, basic functionality)
-- **Phases 6-10**: Interactivity (editing, file operations)
-- **Phases 11-13**: Advanced features (preferences, undo, validation)
-- **Phases 14-16**: Polish (animations, testing, documentation)
-
-**Estimated total**: 16 phases, each representing a logical milestone
+5. Merge to main
+6. Create git tag
 
 ---
 
 ## References
 
-- **UI Design Spec**: `docs/ui-design.md` - Complete design system
-- **Component Reference**: `docs/component-reference.md` - Implementation examples
-- **Visual Mockup**: `docs/mockup.html` - Working HTML reference
+- **UI Design Spec**: `docs/ui-design.md`
+- **Component Reference**: `docs/component-reference.md`
+- **Visual Mockup**: `docs/mockup.html`
 - **Dioxus Docs**: https://dioxuslabs.com/learn/0.7/
-
----
-
-**Let's build something great! 🚀**

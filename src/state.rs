@@ -114,17 +114,26 @@ pub fn create_sample_plan() -> Plan {
         NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
     );
 
+    let oncall = TechnicalProject::new(
+        "Oncall".to_string(),
+        None, // Not linked to a roadmap project
+        0.0,
+        NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
+    );
+
     let auth_tech_id = auth_service.id;
     let payment_tech_id = payment_api.id;
     let ml_tech_id = ml_pipeline.id;
     let data_pipe_tech_id = data_pipeline.id;
     let research_tech_id = research.id;
+    let _oncall_tech_id = oncall.id;
 
     plan.technical_projects.push(auth_service);
     plan.technical_projects.push(payment_api);
     plan.technical_projects.push(ml_pipeline);
     plan.technical_projects.push(data_pipeline);
     plan.technical_projects.push(research);
+    plan.technical_projects.push(oncall);
 
     // Create sample allocations for first few weeks
     // Alice: Payment API for weeks 1-3, then switches to split allocation

@@ -181,6 +181,15 @@ impl TechnicalProject {
             notes: None,
         }
     }
+
+    /// Get the color for this technical project from its parent roadmap project
+    /// Returns Blue if no roadmap project is linked
+    pub fn get_color(&self, plan: &Plan) -> ProjectColor {
+        self.roadmap_project_id
+            .and_then(|id| plan.get_roadmap_project(&id))
+            .map(|rp| rp.color)
+            .unwrap_or(ProjectColor::Blue)
+    }
 }
 
 /// Assignment of a team member to a project for a specific week
