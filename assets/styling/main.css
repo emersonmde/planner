@@ -535,7 +535,7 @@
 }
 
 .grid-week-row-header.sprint-separator {
-  border-top: 4px solid var(--border-emphasis); /* Solid instead of dashed, thicker */
+  border-top: 3px dashed var(--border-emphasis);
   background: #19191d;
   padding-top: calc(var(--space-sm) + 2px);
 }
@@ -639,7 +639,7 @@
 
 /* Sprint separator cells (horizontal border at top) */
 .grid-cell.sprint-separator {
-  border-top: 4px solid var(--border-emphasis); /* Solid and thicker */
+  border-top: 3px dashed var(--border-emphasis);
 }
 
 /* Empty Cell */
@@ -1345,6 +1345,16 @@
   background: color-mix(in srgb, var(--bg-overlay) 85%, var(--primary-50));
   border-color: var(--primary-50);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-50) 40%, transparent), 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: fab-pulse 2s ease-in-out infinite;
+}
+
+@keyframes fab-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-50) 40%, transparent), 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-50) 60%, transparent), 0 6px 20px rgba(10, 132, 255, 0.4);
+  }
 }
 
 /* ===== FLOATING PROJECT PANEL ===== */
