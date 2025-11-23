@@ -1,10 +1,10 @@
 # ADR-004: State Architecture, Persistence, and Export Format
 
-**Status**: Proposed (to be finalized in Milestone 9)
+**Status**: Accepted
 
-**Date**: 2025-01-XX
+**Date**: 2025-01-23
 
-**Decision Makers**: Engineering Team
+**Decision Makers**: Matthew Emerson, Claude Code
 
 ---
 
@@ -189,15 +189,55 @@ use_effect(move || {
 ### 4. Storage Implementation
 
 **For Preferences (localStorage)**:
-- Use `dioxus-storage` crate if available and cross-platform compatible
-- Otherwise, implement custom localStorage wrapper using `web-sys` (web) and platform-specific APIs (desktop)
+
+**Chosen Approach**: `dioxus-sdk` storage (v0.7) with abstraction layer
+
+**Storage Abstraction**:
+```rust
+// src/storage/mod.rs
+pub trait PreferencesStorage {
+    fn save(&self, key: &str, prefs: &Preferences) -> Result<(), StorageError>;
+    fn load(&self, key: &str) -> Result<Option<Preferences>, StorageError>;
+}
+
+#[cfg(feature = "web")]
+pub fn create_storage() -> Box<dyn PreferencesStorage> {
+    Box::new(DioxusStorage::new())
+}
+
+#[cfg(feature = "desktop")]
+pub fn create_storage() -> Box<dyn PreferencesStorage> {
+    Box::new(DioxusStorage::new()) // Same API, different backend
+}
+```
+
+**Rationale**:
+- `dioxus-sdk` 0.7 provides localStorage for web and file-based storage for desktop
+- Abstraction layer allows easy pivot if dioxus-sdk proves problematic
+- Maintains web/desktop parity (both platforms work through same API)
+
+**Fallback Plan** (if dioxus-sdk issues arise):
+- Web: Use `gloo-storage` (proven, well-documented)
+- Desktop: Use `directories` crate + `serde_json` file I/O
 
 **For Plan Export**:
-- Serialization format: **JSON** (human-readable, debuggable)
-  - Considered MessagePack (smaller, faster) but deferred to post-1.0
+- Serialization format: **JSON for v1.0** (human-readable, debuggable)
+  - Considered MessagePack (smaller, faster) - **may be added in v1.0 if simple**
+  - Decision: Build JSON foundation with serialization abstraction to make binary format trivial to add
+  - Binary format would enable compact URL import: `planner.app?import=<base64-msgpack>`
 - Export methods:
   - **Primary**: File download (`plan-backend-q1-2025-01-15.json`)
   - **Fallback**: Base64 clipboard (for Slack/email sharing)
+
+**Serialization Abstraction** (enables easy binary format):
+```rust
+pub trait PlanSerializer {
+    fn serialize(&self, plan: &PlanExport) -> Result<Vec<u8>, SerializeError>;
+    fn deserialize(&self, data: &[u8]) -> Result<PlanExport, DeserializeError>;
+}
+
+// Easy to add: MessagePackSerializer, BincodeSerializer, etc.
+```
 
 **File naming**: `plan-{team_name}-{quarter}-{date}.json`
 
@@ -329,10 +369,10 @@ let allocations = use_signal(|| AllocationState { allocations, metadata });
 
 ### Milestone 9: State Architecture Refactor (2-3 days)
 
-**9.1: Spike** (2-4 hours)
-- Evaluate `dioxus-storage` for localStorage
-- Confirm JSON serialization format
-- Prototype self-contained export
+**9.1: Spike** (2-4 hours) ✅ COMPLETE
+- Evaluated storage options: `dioxus-sdk` (chosen), `gloo-storage` (fallback)
+- Confirmed JSON serialization for v1.0, with abstraction for future binary format
+- Designed self-contained export with team snapshot
 
 **9.2-9.4: Create Models**
 - `Preferences` model with `team_name`
@@ -419,8 +459,11 @@ let allocations = use_signal(|| AllocationState { allocations, metadata });
 
 ## Revision History
 
-- **2025-01-XX**: Initial draft (proposal status)
-- **2025-01-XX**: Updated after M9 spike (final status)
+- **2025-01-17**: Initial draft (proposal status)
+- **2025-01-23**: Finalized after M9 spike - Accepted status
+  - Confirmed `dioxus-sdk` storage with abstraction layer
+  - JSON serialization for v1.0, binary format may be added if implementation is simple
+  - Storage abstraction enables web/desktop parity and easy library pivoting
 - **Future**: Update if v2.0 multi-team implementation reveals issues
 
 ---

@@ -80,7 +80,7 @@ pub fn FloatingProjectPanel(
                         {
                             let project_id = project.id;
                             let allocated = plan_data.calculate_project_allocated_weeks(&project_id);
-                            let color = project.get_color(&plan_data);
+                            let color = project.get_color_from_state(&plan_data);
                             let is_selected = selected_project_id == Some(project_id);
 
                             rsx! {

@@ -4,15 +4,18 @@ use crate::components::ui::{
     Badge, Button, ButtonVariant, CellStyle, DataTable, Input, ProjectName, TableCell, TableHeader,
     TableHeaderCell, TableRow,
 };
-use crate::models::get_capacity_status;
-use crate::state::use_plan_state;
+use crate::models::{get_capacity_status, Role};
+use crate::state::{use_plan_state, use_preferences};
 
 /// Roadmap view - displays roadmap projects table and quarter summary
 /// Reference: docs/ui-design.md section 7.1
 #[component]
 pub fn RoadmapView() -> Element {
-    let plan = use_plan_state();
-    let plan_data = plan();
+    let plan_state = use_plan_state();
+    let preferences = use_preferences();
+
+    let plan_data = plan_state();
+    let prefs_data = preferences();
 
     // Search filter state
     let search_query = use_signal(String::new);
@@ -28,8 +31,37 @@ pub fn RoadmapView() -> Element {
         .collect();
 
     // Calculate quarter summary stats
-    let (eng_capacity, sci_capacity, total_capacity) = plan_data.calculate_total_capacity();
-    let (eng_allocated, sci_allocated, total_allocated) = plan_data.calculate_total_allocated();
+    let (eng_capacity, sci_capacity, total_capacity) = {
+        let mut eng = 0.0;
+        let mut sci = 0.0;
+        for member in &prefs_data.team_members {
+            match member.role {
+                Role::Engineering => eng += member.capacity,
+                Role::Science => sci += member.capacity,
+            }
+        }
+        (eng, sci, eng + sci)
+    };
+
+    let (eng_allocated, sci_allocated, total_allocated) = {
+        let mut eng = 0.0;
+        let mut sci = 0.0;
+        for alloc in &plan_data.allocations {
+            if let Some(member) = prefs_data
+                .team_members
+                .iter()
+                .find(|m| m.id == alloc.team_member_id)
+            {
+                let weeks = alloc.total_percentage() / 100.0;
+                match member.role {
+                    Role::Engineering => eng += weeks,
+                    Role::Science => sci += weeks,
+                }
+            }
+        }
+        (eng, sci, eng + sci)
+    };
+
     let utilization = if total_capacity > 0.0 {
         (total_allocated / total_capacity * 100.0).round() as i32
     } else {
@@ -37,15 +69,15 @@ pub fn RoadmapView() -> Element {
     };
 
     // Calculate team composition
-    let eng_count = plan_data
+    let eng_count = prefs_data
         .team_members
         .iter()
-        .filter(|e| e.role == crate::models::Role::Engineering)
+        .filter(|e| e.role == Role::Engineering)
         .count();
-    let sci_count = plan_data
+    let sci_count = prefs_data
         .team_members
         .iter()
-        .filter(|e| e.role == crate::models::Role::Science)
+        .filter(|e| e.role == Role::Science)
         .count();
 
     rsx! {
@@ -83,7 +115,12 @@ pub fn RoadmapView() -> Element {
                 // Table rows
                 for project in filtered_projects {
                     {
-                        let (eng_alloc, sci_alloc, total_alloc) = plan_data.calculate_roadmap_allocated_weeks(&project.id);
+                        let get_role = |member_id: &uuid::Uuid| {
+                            prefs_data.team_members.iter()
+                                .find(|m| &m.id == member_id)
+                                .map(|m| m.role)
+                        };
+                        let (eng_alloc, sci_alloc, total_alloc) = plan_data.calculate_roadmap_allocated_weeks(&project.id, get_role);
 
                         let eng_status = get_capacity_status(eng_alloc, project.eng_estimate);
                         let sci_status = get_capacity_status(sci_alloc, project.sci_estimate);
@@ -175,7 +212,7 @@ pub fn RoadmapView() -> Element {
 
             // Quarter summary section
             div { class: "quarter-summary",
-                h2 { class: "summary-title", "{plan_data.quarter} Summary" }
+                h2 { class: "summary-title", "{plan_data.quarter_name Summary" }
                 div { class: "summary-metrics",
                     // Total capacity
                     div { class: "metric",

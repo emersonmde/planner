@@ -4,12 +4,13 @@ use dioxus::prelude::*;
 
 use components::layout::View;
 use components::{AllocationView, RoadmapView, TechnicalView, TopNav};
-use state::create_sample_plan;
+use state::{create_sample_plan, AppContext};
 
 /// Define a components module that contains all shared components for our app.
 mod components;
 mod models;
 mod state;
+mod storage;
 mod utils;
 
 // We can import assets in dioxus with the `asset!` macro. This macro takes a path to an asset relative to the crate root.
@@ -31,11 +32,32 @@ fn main() {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
-    // Initialize global state with sample data
-    let plan = use_signal(create_sample_plan);
+    // Load preferences from localStorage or use sample data
+    let (initial_prefs, initial_state) = {
+        let (sample_prefs, sample_state) = create_sample_plan();
 
-    // Provide the plan state to all child components via context
-    use_context_provider(|| plan);
+        // Try to load preferences from localStorage (web only)
+        let prefs = storage::load_preferences().unwrap_or(sample_prefs);
+
+        (prefs, sample_state)
+    };
+
+    // Create two independent signals
+    let preferences = use_signal(|| initial_prefs);
+    let plan_state = use_signal(|| initial_state);
+
+    // Auto-save preferences to localStorage when they change
+    use_effect(move || {
+        let prefs = preferences();
+        // Save in background (ignore errors for now - could log them in production)
+        let _ = storage::save_preferences(&prefs);
+    });
+
+    // Provide the app context with two signals to all child components
+    use_context_provider(|| AppContext {
+        preferences,
+        plan_state,
+    });
 
     // Active view state
     let active_view = use_signal(|| View::Allocation);

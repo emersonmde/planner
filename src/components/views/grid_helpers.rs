@@ -2,12 +2,12 @@
 use chrono::NaiveDate;
 
 use crate::components::ui::GridCellVariant;
-use crate::models::{Allocation, Plan, ProjectColor};
+use crate::models::{Allocation, PlanState, ProjectColor};
 
 /// Calculate the appropriate GridCellVariant for a given allocation
 pub fn calculate_cell_variant(
     allocation: Option<&Allocation>,
-    plan: &Plan,
+    plan_state: &PlanState,
     week_start_date: NaiveDate,
 ) -> GridCellVariant {
     let Some(alloc) = allocation else {
@@ -16,33 +16,33 @@ pub fn calculate_cell_variant(
 
     // Split allocation (2 projects)
     if alloc.assignments.len() == 2 {
-        return create_split_variant(alloc, plan);
+        return create_split_variant(alloc, plan_state);
     }
 
     // Single project allocation
     if let Some(assignment) = alloc.assignments.first() {
-        return create_single_week_variant(assignment, plan, week_start_date);
+        return create_single_week_variant(assignment, plan_state, week_start_date);
     }
 
     GridCellVariant::Empty
 }
 
 /// Create a split allocation cell variant
-fn create_split_variant(alloc: &Allocation, plan: &Plan) -> GridCellVariant {
+fn create_split_variant(alloc: &Allocation, plan_state: &PlanState) -> GridCellVariant {
     let assignment1 = &alloc.assignments[0];
     let assignment2 = &alloc.assignments[1];
 
-    let project1 = plan.get_technical_project(&assignment1.technical_project_id);
-    let project2 = plan.get_technical_project(&assignment2.technical_project_id);
+    let project1 = plan_state.get_technical_project(&assignment1.technical_project_id);
+    let project2 = plan_state.get_technical_project(&assignment2.technical_project_id);
 
     match (project1, project2) {
         (Some(p1), Some(p2)) => {
             let rp1 = p1
                 .roadmap_project_id
-                .and_then(|id| plan.get_roadmap_project(&id));
+                .and_then(|id| plan_state.get_roadmap_project(&id));
             let rp2 = p2
                 .roadmap_project_id
-                .and_then(|id| plan.get_roadmap_project(&id));
+                .and_then(|id| plan_state.get_roadmap_project(&id));
 
             GridCellVariant::Split {
                 project1_name: p1.name.clone(),
@@ -60,16 +60,16 @@ fn create_split_variant(alloc: &Allocation, plan: &Plan) -> GridCellVariant {
 /// Create a single week allocation cell variant
 fn create_single_week_variant(
     assignment: &crate::models::Assignment,
-    plan: &Plan,
+    plan_state: &PlanState,
     week_start_date: NaiveDate,
 ) -> GridCellVariant {
-    let Some(proj) = plan.get_technical_project(&assignment.technical_project_id) else {
+    let Some(proj) = plan_state.get_technical_project(&assignment.technical_project_id) else {
         return GridCellVariant::Empty;
     };
 
     let roadmap_project = proj
         .roadmap_project_id
-        .and_then(|id| plan.get_roadmap_project(&id));
+        .and_then(|id| plan_state.get_roadmap_project(&id));
     let project_color = roadmap_project
         .map(|rp| rp.color)
         .unwrap_or(ProjectColor::Blue);

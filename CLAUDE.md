@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Quarterly Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and file-based persistence.
 
-**Status:** Phase 5 complete (Technical Projects View). The app now features a functional Technical Projects view with side panel filters, sorting, and search. See `docs/roadmap.md` for the full 16-phase development plan.
+**Status:** Milestone 9 Complete (State Architecture Refactor). The app now uses a two-signal architecture (Preferences + PlanState) for better reactivity and localStorage persistence. Includes interactive allocation grid, paintbrush mode, tooltips, and self-contained export format ready for M13. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
 
 ## Development Commands
 
@@ -91,8 +91,8 @@ src/
 │   ├── layout/      # TopNav, future: SidePanel
 │   ├── ui/          # Reusable UI primitives (Button, Badge, Input)
 │   └── views/       # Main view components (RoadmapView, TechnicalView, AllocationView)
-├── models/          # Data structures (Phase 2+)
-└── utils/           # Helper functions (Phase 2+)
+├── models/          # Data structures (Plan, TeamMember, Projects, Allocations)
+└── utils/           # Helper functions (date calculations, capacity tracking)
 ```
 
 ### Design System
@@ -107,12 +107,15 @@ The application uses a comprehensive design token system defined in `assets/styl
 - **Spacing**: 8px base unit, all spacing uses multiples of 4px/8px
 - **Transitions**: Three timing functions (quick 150ms, base 250ms, slow 400ms)
 
-### State Management (Phase 2+)
+### State Management
 
-Will use Dioxus signals for global state:
-- `use_plan_state()` hook for accessing plan data
-- Signals for: engineers, roadmap projects, technical projects, allocations
-- State updates trigger reactive UI updates
+**Current (M1-8)**: Single-signal architecture with `use_plan_state()` hook
+**Planned (M9)**: Two-signal architecture for improved reactivity and persistence
+- `use_preferences()`: Team roster, sprint config (persisted to localStorage)
+- `use_plan_state()`: Projects, allocations (exported/imported per quarter)
+- `PlanExport`: Self-contained format for sharing and future multi-team aggregation
+
+State updates trigger reactive UI updates via Dioxus signals.
 
 ### Component Patterns
 
@@ -135,7 +138,7 @@ Will use Dioxus signals for global state:
 ## Key Documentation
 
 ### Getting Started
-- **`docs/roadmap.md`**: Complete 16-phase development plan with acceptance criteria for each phase
+- **`docs/roadmap.md`**: Complete v1.0 roadmap with 17 milestones, acceptance criteria, and post-1.0 vision
 - **`docs/ui-design.md`**: Comprehensive UI/UX specification with design tokens, color system, component specs
 - **`docs/component-reference.md`**: Implementation examples for each component with HTML/CSS/Dioxus notes
 - **`docs/mockup.html`**: Working HTML reference implementation (open in browser to see visual design)
@@ -152,41 +155,59 @@ ADRs document major design decisions and their rationale. Located in `docs/adrs/
 - **`ADR-003-grid-layout.md`**: Why horizontal timeline, CSS Grid choice, sticky header strategy, performance considerations
 
 ### Future Documentation
-These will be created in later phases:
-- `docs/interaction-patterns.md` - User interaction modes (Phase 6)
-- `docs/file-format.md` - JSON and CSV format specifications (Phase 9-10)
-- `docs/preferences.md` - All settings and defaults (Phase 11)
-- `docs/validation.md` - Validation rules and error handling (Phase 13)
-- `docs/testing.md` - Testing strategy and guide (Phase 15)
-- `docs/keyboard-shortcuts.md` - Complete keyboard navigation reference (Phase 15)
+These will be created in upcoming milestones:
+- **M9**: `docs/adrs/ADR-004-state-persistence.md` - State architecture, persistence strategy, and self-contained export format
+- **M13**: `docs/file-format.md` - PlanExport JSON schema and import/export specifications
+- **M14**: `docs/validation.md` - Validation rules, error messages, and user feedback patterns
+- **M16**: `docs/testing.md` - Testing strategy, coverage goals, and accessibility testing
+- **M17**: `docs/user-guide.md` - End-user documentation with workflows and keyboard shortcuts
 
-## Phase-Based Development
+## Milestone-Based Development
 
-The project follows a strict phased approach. **Never skip ahead to future phases.** Each phase must:
+The project follows a structured milestone approach toward v1.0 release. **Never skip ahead to future milestones.** Each milestone must:
 1. Build successfully (`dx build`)
 2. Meet all acceptance criteria
 3. Be manually tested
 4. Have documentation updated
 
-**Current Phase:** Phase 5 Complete (Technical Projects View)
-**Next Phase:** Phase 6 - Interactive Allocation Grid (Paintbrush Mode)
+**Current Status:** Milestone 9 Complete (State Architecture Refactor)
+**Next Milestone:** Milestone 10 - Roadmap Projects Management (CRUD Operations)
 
-When implementing new phases:
-1. Read the phase details in `docs/roadmap.md`
-2. Reference `docs/ui-design.md` for design specifications
-3. Check `docs/component-reference.md` for implementation examples
-4. Ensure the build passes before moving on
+**v1.0 Goals** (M9-M17):
+- Two-signal state architecture (preferences + plan_state)
+- Full CRUD operations for roadmap projects, technical projects, and team members
+- Self-contained plan export/import for sharing and versioning
+- Undo/redo system for all operations
+- Comprehensive validation and user feedback
+- Accessibility compliance (WCAG AA)
+- Production-ready polish and documentation
 
-## Data Model (Phase 2+)
+**Post-1.0 Vision:**
+- Multi-team aggregation (Sr Manager view across multiple teams)
+- Cloud sync and real-time collaboration
+- Advanced reporting and analytics
 
-The application will manage:
-- **Engineers**: id, name, role (Eng/Sci), capacity (weeks)
-- **RoadmapProjects**: high-level initiatives with estimates and launch dates
-- **TechnicalProjects**: implementation work linked to roadmap projects
-- **Allocations**: weekly assignments of engineers to technical projects
+When implementing new milestones:
+1. Read the milestone details in `docs/roadmap.md`
+2. Review context, design decisions, and dependencies
+3. Reference `docs/ui-design.md` for design specifications
+4. Check `docs/component-reference.md` for implementation examples
+5. Ensure the build passes before moving on
+
+## Data Model
+
+The application manages:
+- **TeamMember**: id, name, role (Eng/Sci), capacity (weeks) - stored in Preferences (M9+)
+- **RoadmapProject**: id, name, eng/sci estimates, dates, notes, color - stored in PlanState
+- **TechnicalProject**: id, name, roadmap link, estimated weeks, dates - stored in PlanState
+- **Allocation**: week_start, team_member_id, assignments (project_id + percentage) - stored in PlanState
 - **ProjectColor**: enum for visual differentiation (9 colors)
 
-File format: JSON (see `docs/ui-design.md` section 9.2 for schema)
+**Current (M8)**: Single `Plan` struct with all data
+**Planned (M9)**: Split into `Preferences` (localStorage) and `PlanState` (exported/imported)
+**Export Format (M9+)**: `PlanExport` - self-contained JSON including team snapshot for portability
+
+File format: See `docs/roadmap.md` Milestone 9 for data model refactor details
 
 ## Dioxus 0.7 Patterns
 

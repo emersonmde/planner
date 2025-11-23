@@ -93,7 +93,7 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 ## Milestone 9: State Architecture Refactor
 **Goal:** Split monolithic Plan state into two signals for optimal reactivity, persistence, and prepare for 1.0 export/import
 
-**Status:** 📋 Not Started
+**Status:** ✅ Complete
 **Estimated Effort:** 2-3 days (includes spike)
 
 ### Context

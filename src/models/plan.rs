@@ -164,6 +164,7 @@ pub struct TechnicalProject {
     pub notes: Option<String>,
 }
 
+#[allow(dead_code)] // Methods used in future milestones
 impl TechnicalProject {
     pub fn new(
         name: String,
@@ -182,11 +183,11 @@ impl TechnicalProject {
         }
     }
 
-    /// Get the color for this technical project from its parent roadmap project
+    /// Get the color for this technical project from PlanState
     /// Returns Blue if no roadmap project is linked
-    pub fn get_color(&self, plan: &Plan) -> ProjectColor {
+    pub fn get_color_from_state(&self, state: &super::PlanState) -> ProjectColor {
         self.roadmap_project_id
-            .and_then(|id| plan.get_roadmap_project(&id))
+            .and_then(|id| state.get_roadmap_project(&id))
             .map(|rp| rp.color)
             .unwrap_or(ProjectColor::Blue)
     }
@@ -266,6 +267,12 @@ impl Allocation {
 }
 
 /// Complete quarterly plan data
+///
+/// **DEPRECATED (Milestone 9)**: This struct is kept for backward compatibility during
+/// the migration to two-signal architecture. New code should use `Preferences` and `PlanState`
+/// directly via the `use_preferences()` and `use_plan_state()` hooks.
+///
+/// This wrapper will be removed in Milestone 10+ once all components have migrated.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Plan {
     /// File format version for future compatibility
@@ -279,6 +286,12 @@ pub struct Plan {
     /// Sprint length in weeks (typically 2)
     #[serde(default = "default_sprint_length")]
     pub sprint_length_weeks: usize,
+    /// Sprint anchor date (global)
+    #[serde(default = "default_sprint_anchor")]
+    pub sprint_anchor_date: NaiveDate,
+    /// Team name
+    #[serde(default = "default_team_name")]
+    pub team_name: String,
     /// All team members (engineers and scientists)
     pub team_members: Vec<TeamMember>,
     /// All roadmap projects
@@ -293,21 +306,16 @@ fn default_sprint_length() -> usize {
     2
 }
 
-impl Plan {
-    pub fn new(quarter: String, quarter_start_date: NaiveDate, weeks_in_quarter: usize) -> Self {
-        Self {
-            version: "1.0".to_string(),
-            quarter,
-            quarter_start_date,
-            weeks_in_quarter,
-            sprint_length_weeks: default_sprint_length(),
-            team_members: Vec::new(),
-            roadmap_projects: Vec::new(),
-            technical_projects: Vec::new(),
-            allocations: Vec::new(),
-        }
-    }
+fn default_sprint_anchor() -> NaiveDate {
+    NaiveDate::from_ymd_opt(2024, 1, 1).expect("Valid sprint anchor")
+}
 
+fn default_team_name() -> String {
+    "My Team".to_string()
+}
+
+#[allow(dead_code)] // Plan wrapper kept for backward compatibility, will be removed in M10+
+impl Plan {
     /// Get team member by ID
     pub fn get_team_member(&self, id: &Uuid) -> Option<&TeamMember> {
         self.team_members.iter().find(|e| &e.id == id)
@@ -426,6 +434,8 @@ impl Plan {
     /// - expected_completion: Set to the end of the sprint containing the last allocation
     ///
     /// Call this after adding, removing, or modifying allocations for a project.
+    ///
+    /// **Note**: Uses sprint_anchor_date (global) instead of quarter_start_date
     pub fn update_technical_project_dates(&mut self, technical_project_id: &Uuid) {
         use crate::utils::date_helpers::get_sprint_boundaries;
 
@@ -452,14 +462,14 @@ impl Plan {
         let first_week = allocation_weeks[0];
         let last_week = allocation_weeks[allocation_weeks.len() - 1];
 
-        // Calculate sprint boundaries
+        // Calculate sprint boundaries using global anchor
         let (first_sprint_start, _) = get_sprint_boundaries(
             first_week,
-            self.quarter_start_date,
+            self.sprint_anchor_date,
             self.sprint_length_weeks,
         );
         let (_, last_sprint_end) =
-            get_sprint_boundaries(last_week, self.quarter_start_date, self.sprint_length_weeks);
+            get_sprint_boundaries(last_week, self.sprint_anchor_date, self.sprint_length_weeks);
 
         // Update the technical project
         if let Some(project) = self

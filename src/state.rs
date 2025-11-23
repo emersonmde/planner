@@ -1,5 +1,13 @@
 //! Global state management using Dioxus signals
 //! Reference: Dioxus 0.7 context API for sharing state
+//!
+//! ## Two-Signal Architecture (Milestone 9)
+//!
+//! The application uses two independent signals:
+//! - `preferences`: Team roster, sprint config (persisted to localStorage)
+//! - `plan_state`: Projects, allocations (exported/imported per quarter)
+//!
+//! See ADR-004 for design rationale.
 
 use chrono::NaiveDate;
 use dioxus::prelude::*;
@@ -7,24 +15,58 @@ use dioxus::prelude::*;
 use crate::models::*;
 use crate::utils::get_quarter_start_date;
 
-/// Global application state
-#[allow(dead_code)] // Reserved for future state management refactoring
-#[derive(Clone, Debug, PartialEq)]
-pub struct AppState {
-    pub plan: Signal<Plan>,
+/// Global application context with two independent signals
+///
+/// This replaces the old single `Signal<Plan>` with two signals:
+/// - `preferences`: Long-term team configuration
+/// - `plan_state`: Quarter-specific planning data
+#[derive(Clone, Copy)]
+pub struct AppContext {
+    pub preferences: Signal<Preferences>,
+    pub plan_state: Signal<PlanState>,
 }
 
-/// Hook to access the global plan state
-/// This uses Dioxus 0.7's context API
-pub fn use_plan_state() -> Signal<Plan> {
-    use_context::<Signal<Plan>>()
+/// Hook to access team preferences (persisted to localStorage)
+///
+/// Preferences include:
+/// - Team name
+/// - Team roster (members with roles and capacity)
+/// - Sprint configuration (anchor date, length)
+/// - Default capacity
+pub fn use_preferences() -> Signal<Preferences> {
+    use_context::<AppContext>().preferences
+}
+
+/// Hook to access planning state (exported/imported per quarter)
+///
+/// Plan state includes:
+/// - Quarter info (name, start date, duration)
+/// - Roadmap projects
+/// - Technical projects
+/// - Allocations
+/// - Metadata (version, timestamps)
+pub fn use_plan_state() -> Signal<PlanState> {
+    use_context::<AppContext>().plan_state
 }
 
 /// Initialize the application state with sample data
 /// This creates team members, projects, and allocations for Q1 2025
-pub fn create_sample_plan() -> Plan {
+///
+/// Returns (Preferences, PlanState) tuple for two-signal architecture
+pub fn create_sample_plan() -> (Preferences, PlanState) {
     let quarter_start = get_quarter_start_date(2025, 1).expect("Valid Q1 2025 date");
-    let mut plan = Plan::new("Q1 2025".to_string(), quarter_start, 13);
+
+    // Create preferences (team config)
+    let mut preferences = Preferences {
+        team_name: "Engineering Team".to_string(),
+        team_members: Vec::new(),
+        sprint_anchor_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("Valid anchor date"),
+        sprint_length_weeks: 2,
+        default_capacity: 12.0,
+    };
+
+    // Create plan state (quarter-specific data)
+    let mut plan_state = PlanState::new("Q1 2025".to_string(), quarter_start, 13);
 
     // Create team members
     let alice = TeamMember::new("Alice Kim".to_string(), Role::Engineering, 12.0);
@@ -37,10 +79,10 @@ pub fn create_sample_plan() -> Plan {
     let carol_id = carol.id;
     let dave_id = dave.id;
 
-    plan.team_members.push(alice);
-    plan.team_members.push(bob);
-    plan.team_members.push(carol);
-    plan.team_members.push(dave);
+    preferences.team_members.push(alice);
+    preferences.team_members.push(bob);
+    preferences.team_members.push(carol);
+    preferences.team_members.push(dave);
 
     // Create roadmap projects
     let platform_project = RoadmapProject::new(
@@ -74,9 +116,9 @@ pub fn create_sample_plan() -> Plan {
     let payment_roadmap_id = payment_project.id;
     let data_roadmap_id = data_project.id;
 
-    plan.roadmap_projects.push(platform_project);
-    plan.roadmap_projects.push(payment_project);
-    plan.roadmap_projects.push(data_project);
+    plan_state.roadmap_projects.push(platform_project);
+    plan_state.roadmap_projects.push(payment_project);
+    plan_state.roadmap_projects.push(data_project);
 
     // Create technical projects
     let auth_service = TechnicalProject::new(
@@ -120,11 +162,11 @@ pub fn create_sample_plan() -> Plan {
     let data_pipe_tech_id = data_pipeline.id;
     let research_tech_id = research.id;
 
-    plan.technical_projects.push(auth_service);
-    plan.technical_projects.push(payment_api);
-    plan.technical_projects.push(ml_pipeline);
-    plan.technical_projects.push(data_pipeline);
-    plan.technical_projects.push(research);
+    plan_state.technical_projects.push(auth_service);
+    plan_state.technical_projects.push(payment_api);
+    plan_state.technical_projects.push(ml_pipeline);
+    plan_state.technical_projects.push(data_pipeline);
+    plan_state.technical_projects.push(research);
 
     // Create sample allocations for first few weeks
     // Alice: Payment API for weeks 1-3, then switches to split allocation
@@ -134,7 +176,7 @@ pub fn create_sample_plan() -> Plan {
         alloc
             .assignments
             .push(Assignment::new(payment_tech_id, 100.0));
-        plan.allocations.push(alloc);
+        plan_state.allocations.push(alloc);
     }
 
     // Alice: Split allocation in week 4 (60% Payment, 40% Data)
@@ -146,14 +188,14 @@ pub fn create_sample_plan() -> Plan {
     alice_split
         .assignments
         .push(Assignment::new(data_pipe_tech_id, 40.0));
-    plan.allocations.push(alice_split);
+    plan_state.allocations.push(alice_split);
 
     // Bob: ML Pipeline for weeks 1-4
     for week_num in 0..4 {
         let week_start = quarter_start + chrono::Duration::weeks(week_num);
         let mut alloc = Allocation::new(bob_id, week_start);
         alloc.assignments.push(Assignment::new(ml_tech_id, 100.0));
-        plan.allocations.push(alloc);
+        plan_state.allocations.push(alloc);
     }
 
     // Carol: Research for weeks 1-2, unallocated week 3, research week 4
@@ -166,7 +208,7 @@ pub fn create_sample_plan() -> Plan {
                 .assignments
                 .push(Assignment::new(research_tech_id, 100.0));
         }
-        plan.allocations.push(alloc);
+        plan_state.allocations.push(alloc);
     }
 
     // Dave: Auth Service for weeks 1-3
@@ -174,10 +216,10 @@ pub fn create_sample_plan() -> Plan {
         let week_start = quarter_start + chrono::Duration::weeks(week_num);
         let mut alloc = Allocation::new(dave_id, week_start);
         alloc.assignments.push(Assignment::new(auth_tech_id, 100.0));
-        plan.allocations.push(alloc);
+        plan_state.allocations.push(alloc);
     }
 
-    plan
+    (preferences, plan_state)
 }
 
 /// Validation errors for the plan

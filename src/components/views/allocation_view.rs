@@ -6,7 +6,7 @@ use crate::components::ui::{
     KeybindingsOverlay, SplitAllocationModal,
 };
 use crate::models::{Allocation, Assignment};
-use crate::state::use_plan_state;
+use crate::state::{use_plan_state, use_preferences};
 use crate::utils::generate_quarter_weeks;
 
 use super::grid_helpers::{calculate_cell_class, calculate_cell_variant};
@@ -16,8 +16,16 @@ use super::paintbrush::{allocate_project_to_cell, SelectedProject};
 /// Reference: docs/ui-design.md section 7.3
 #[component]
 pub fn AllocationView() -> Element {
-    let mut plan = use_plan_state();
-    let plan_data = plan();
+    // Two-signal architecture (M9)
+    let mut plan_state = use_plan_state();
+    let preferences = use_preferences();
+
+    let plan_data = plan_state();
+    let prefs_data = preferences();
+
+    // Capture sprint config for use in update_technical_project_dates calls
+    let sprint_anchor = prefs_data.sprint_anchor_date;
+    let sprint_length = prefs_data.sprint_length_weeks;
 
     // Paintbrush mode state
     let mut paintbrush_active = use_signal(|| false);
@@ -55,18 +63,19 @@ pub fn AllocationView() -> Element {
 
     // Generate weeks for the quarter using memo
     let weeks = use_memo(move || {
-        let plan_data = plan();
+        let plan_data = plan_state();
+        let prefs_data = preferences();
         generate_quarter_weeks(
             plan_data.quarter_start_date,
-            plan_data.weeks_in_quarter,
-            plan_data.sprint_length_weeks,
+            plan_data.num_weeks,
+            prefs_data.sprint_length_weeks,
         )
     });
 
     // Calculate grid columns dynamically (engineers as columns now)
     let grid_template_columns = use_memo(move || {
-        let plan_data = plan();
-        format!("120px repeat({}, 180px)", plan_data.team_members.len())
+        let prefs_data = preferences();
+        format!("120px repeat({}, 180px)", prefs_data.team_members.len())
     });
 
     // Event handlers
@@ -92,7 +101,7 @@ pub fn AllocationView() -> Element {
         if matches!(evt.key(), Key::Delete | Key::Backspace) {
             if let Some((team_member_id, week_start)) = focused_cell() {
                 // Clear allocation
-                plan.with_mut(|p| {
+                plan_state.with_mut(|p| {
                     // Find which project(s) were allocated to update their dates
                     let affected_projects: Vec<uuid::Uuid> = p
                         .allocations
@@ -110,7 +119,7 @@ pub fn AllocationView() -> Element {
 
                     // Update dates for all affected projects
                     for project_id in affected_projects {
-                        p.update_technical_project_dates(&project_id);
+                        p.update_technical_project_dates(&project_id, sprint_anchor, sprint_length);
                     }
                 });
             }
@@ -121,7 +130,7 @@ pub fn AllocationView() -> Element {
             && (evt.modifiers().meta() || evt.modifiers().ctrl())
         {
             if let Some((team_member_id, week_start)) = focused_cell() {
-                let plan_data = plan();
+                let plan_data = plan_state();
                 let allocation_map: HashMap<(uuid::Uuid, chrono::NaiveDate), &Allocation> =
                     plan_data
                         .allocations
@@ -141,7 +150,7 @@ pub fn AllocationView() -> Element {
         {
             if let Some((team_member_id, week_start)) = focused_cell() {
                 if let Some(assignments) = clipboard() {
-                    plan.with_mut(|p| {
+                    plan_state.with_mut(|p| {
                         // Find which project(s) were previously allocated
                         let previous_projects: Vec<uuid::Uuid> = p
                             .allocations
@@ -166,7 +175,11 @@ pub fn AllocationView() -> Element {
 
                         // Update dates for newly pasted projects
                         for assignment in &assignments {
-                            p.update_technical_project_dates(&assignment.technical_project_id);
+                            p.update_technical_project_dates(
+                                &assignment.technical_project_id,
+                                sprint_anchor,
+                                sprint_length,
+                            );
                         }
 
                         // Update dates for previously assigned projects
@@ -175,7 +188,11 @@ pub fn AllocationView() -> Element {
                                 .iter()
                                 .any(|a| a.technical_project_id == prev_project_id)
                             {
-                                p.update_technical_project_dates(&prev_project_id);
+                                p.update_technical_project_dates(
+                                    &prev_project_id,
+                                    sprint_anchor,
+                                    sprint_length,
+                                );
                             }
                         }
                     });
@@ -201,7 +218,7 @@ pub fn AllocationView() -> Element {
                     panel_visible.set(true);
                     panel_search_query.set(String::new());
                     // Pre-fill selected project if cell has allocation
-                    let plan_data = plan();
+                    let plan_data = plan_state();
                     let allocation_map: std::collections::HashMap<
                         (uuid::Uuid, chrono::NaiveDate),
                         &crate::models::Allocation,
@@ -226,7 +243,7 @@ pub fn AllocationView() -> Element {
                     // Open split modal
                     split_modal_visible.set(true);
                     // Pre-fill with current allocation if exists
-                    let plan_data = plan();
+                    let plan_data = plan_state();
                     let allocation_map: std::collections::HashMap<
                         (uuid::Uuid, chrono::NaiveDate),
                         &crate::models::Allocation,
@@ -254,7 +271,7 @@ pub fn AllocationView() -> Element {
                 }
                 MenuAction::ClearAssignment => {
                     // Clear allocation
-                    plan.with_mut(|p| {
+                    plan_state.with_mut(|p| {
                         // Find which project(s) were allocated to update their dates
                         let affected_projects: Vec<uuid::Uuid> = p
                             .allocations
@@ -273,7 +290,11 @@ pub fn AllocationView() -> Element {
 
                         // Update dates for all affected projects
                         for project_id in affected_projects {
-                            p.update_technical_project_dates(&project_id);
+                            p.update_technical_project_dates(
+                                &project_id,
+                                sprint_anchor,
+                                sprint_length,
+                            );
                         }
                     });
                 }
@@ -285,7 +306,7 @@ pub fn AllocationView() -> Element {
     let handle_assign_apply = move |_| {
         if let Some((team_member_id, week_start)) = context_menu_cell() {
             if let Some(proj_id) = assign_project_id() {
-                plan.with_mut(|p| {
+                plan_state.with_mut(|p| {
                     // Find which project(s) were previously allocated
                     let previous_projects: Vec<uuid::Uuid> = p
                         .allocations
@@ -308,12 +329,16 @@ pub fn AllocationView() -> Element {
                     p.allocations.push(alloc);
 
                     // Update dates for newly assigned project
-                    p.update_technical_project_dates(&proj_id);
+                    p.update_technical_project_dates(&proj_id, sprint_anchor, sprint_length);
 
                     // Update dates for previously assigned projects
                     for prev_project_id in previous_projects {
                         if prev_project_id != proj_id {
-                            p.update_technical_project_dates(&prev_project_id);
+                            p.update_technical_project_dates(
+                                &prev_project_id,
+                                sprint_anchor,
+                                sprint_length,
+                            );
                         }
                     }
                 });
@@ -335,7 +360,7 @@ pub fn AllocationView() -> Element {
         if let Some((team_member_id, week_start)) = context_menu_cell() {
             if let (Some(proj1_id), Some(proj2_id)) = (split_project1_id(), split_project2_id()) {
                 if proj1_id != proj2_id {
-                    plan.with_mut(|p| {
+                    plan_state.with_mut(|p| {
                         // Find which project(s) were previously allocated
                         let previous_projects: Vec<uuid::Uuid> = p
                             .allocations
@@ -362,13 +387,17 @@ pub fn AllocationView() -> Element {
                         p.allocations.push(alloc);
 
                         // Update dates for newly assigned projects
-                        p.update_technical_project_dates(&proj1_id);
-                        p.update_technical_project_dates(&proj2_id);
+                        p.update_technical_project_dates(&proj1_id, sprint_anchor, sprint_length);
+                        p.update_technical_project_dates(&proj2_id, sprint_anchor, sprint_length);
 
                         // Update dates for previously assigned projects
                         for prev_project_id in previous_projects {
                             if prev_project_id != proj1_id && prev_project_id != proj2_id {
-                                p.update_technical_project_dates(&prev_project_id);
+                                p.update_technical_project_dates(
+                                    &prev_project_id,
+                                    sprint_anchor,
+                                    sprint_length,
+                                );
                             }
                         }
                     });
@@ -415,7 +444,7 @@ pub fn AllocationView() -> Element {
         if assign_mode() {
             // Direct assign mode - assign to cell and close panel
             if let Some((team_member_id, week_start)) = context_menu_cell() {
-                plan.with_mut(|p| {
+                plan_state.with_mut(|p| {
                     // Find which project(s) were previously allocated
                     let previous_projects: Vec<uuid::Uuid> = p
                         .allocations
@@ -438,12 +467,16 @@ pub fn AllocationView() -> Element {
                     p.allocations.push(alloc);
 
                     // Update dates for newly assigned project
-                    p.update_technical_project_dates(&project_id);
+                    p.update_technical_project_dates(&project_id, sprint_anchor, sprint_length);
 
                     // Update dates for previously assigned projects
                     for prev_project_id in previous_projects {
                         if prev_project_id != project_id {
-                            p.update_technical_project_dates(&prev_project_id);
+                            p.update_technical_project_dates(
+                                &prev_project_id,
+                                sprint_anchor,
+                                sprint_length,
+                            );
                         }
                     }
                 });
@@ -463,7 +496,7 @@ pub fn AllocationView() -> Element {
         if assign_mode() {
             // Direct assign mode - clear cell and close panel
             if let Some((team_member_id, week_start)) = context_menu_cell() {
-                plan.with_mut(|p| {
+                plan_state.with_mut(|p| {
                     // Remove existing allocation
                     p.allocations.retain(|a| {
                         !(a.team_member_id == team_member_id && a.week_start_date == week_start)
@@ -491,8 +524,14 @@ pub fn AllocationView() -> Element {
             return;
         }
 
-        let success =
-            allocate_project_to_cell(&mut plan, &selected_project(), team_member_id, week_start);
+        let success = allocate_project_to_cell(
+            &mut plan_state,
+            &selected_project(),
+            team_member_id,
+            week_start,
+            sprint_anchor,
+            sprint_length,
+        );
 
         if success {
             error_cell.set(None);
@@ -588,10 +627,10 @@ pub fn AllocationView() -> Element {
                     div { class: "grid-header-corner" }
 
                     // Column headers (engineers)
-                    for engineer in &plan_data.team_members {
+                    for engineer in &prefs_data.team_members {
                         {
                             let engineer_id = engineer.id;
-                            let allocated = plan_data.calculate_allocated_weeks(&engineer_id);
+                            let allocated = plan_data.calculate_team_member_allocated_weeks(&engineer_id);
                             let capacity = engineer.capacity;
                             let diff = (allocated - capacity).abs();
                             let capacity_status = if diff <= 0.5 {
@@ -659,7 +698,7 @@ pub fn AllocationView() -> Element {
                                 }
 
                                 // Grid cells (iterate over engineers)
-                                for engineer in &plan_data.team_members {
+                                for engineer in &prefs_data.team_members {
                                     {
                                         let engineer_id = engineer.id;
 
