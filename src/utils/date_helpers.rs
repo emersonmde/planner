@@ -137,6 +137,36 @@ pub fn get_week_start(date: NaiveDate) -> NaiveDate {
     date - Duration::days(days_since_monday)
 }
 
+/// Calculate sprint boundaries (start and end dates) for a given week
+///
+/// # Arguments
+/// * `week_start` - The Monday start date of a week
+/// * `quarter_start` - The first Monday of the quarter
+/// * `sprint_length_weeks` - Number of weeks in each sprint (typically 2)
+///
+/// # Returns
+/// (sprint_start_date, sprint_end_date) where end date is the last day (Sunday) of the sprint
+pub fn get_sprint_boundaries(
+    week_start: NaiveDate,
+    quarter_start: NaiveDate,
+    sprint_length_weeks: usize,
+) -> (NaiveDate, NaiveDate) {
+    // Calculate which week of the quarter this is (0-indexed)
+    let days_since_quarter_start = (week_start - quarter_start).num_days();
+    let week_index = (days_since_quarter_start / 7) as usize;
+
+    // Calculate which sprint this week belongs to (0-indexed)
+    let sprint_index = week_index / sprint_length_weeks;
+
+    // Calculate the start of this sprint (first Monday)
+    let sprint_start = quarter_start + Duration::weeks((sprint_index * sprint_length_weeks) as i64);
+
+    // Calculate the end of this sprint (last Sunday)
+    let sprint_end = sprint_start + Duration::weeks(sprint_length_weeks as i64) - Duration::days(1);
+
+    (sprint_start, sprint_end)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -193,5 +223,29 @@ mod tests {
         let monday = get_week_start(wed);
         assert_eq!(monday, NaiveDate::from_ymd_opt(2025, 1, 6).unwrap());
         assert_eq!(monday.weekday(), Weekday::Mon);
+    }
+
+    #[test]
+    fn test_get_sprint_boundaries() {
+        let quarter_start = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(); // Monday, Jan 6
+        let sprint_length = 2; // 2-week sprints
+
+        // Week 1 (Jan 6) - should be in Sprint 1 (Jan 6 - Jan 19)
+        let week1 = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let (start, end) = get_sprint_boundaries(week1, quarter_start, sprint_length);
+        assert_eq!(start, NaiveDate::from_ymd_opt(2025, 1, 6).unwrap()); // Monday
+        assert_eq!(end, NaiveDate::from_ymd_opt(2025, 1, 19).unwrap()); // Sunday
+
+        // Week 2 (Jan 13) - still in Sprint 1
+        let week2 = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
+        let (start, end) = get_sprint_boundaries(week2, quarter_start, sprint_length);
+        assert_eq!(start, NaiveDate::from_ymd_opt(2025, 1, 6).unwrap());
+        assert_eq!(end, NaiveDate::from_ymd_opt(2025, 1, 19).unwrap());
+
+        // Week 3 (Jan 20) - should be in Sprint 2 (Jan 20 - Feb 2)
+        let week3 = NaiveDate::from_ymd_opt(2025, 1, 20).unwrap();
+        let (start, end) = get_sprint_boundaries(week3, quarter_start, sprint_length);
+        assert_eq!(start, NaiveDate::from_ymd_opt(2025, 1, 20).unwrap());
+        assert_eq!(end, NaiveDate::from_ymd_opt(2025, 2, 2).unwrap());
     }
 }

@@ -419,6 +419,58 @@ impl Plan {
         let total_allocated = eng_allocated + sci_allocated;
         (eng_allocated, sci_allocated, total_allocated)
     }
+
+    /// Update a technical project's start_date and expected_completion based on its allocations
+    ///
+    /// - start_date: Set to the start of the sprint containing the first allocation
+    /// - expected_completion: Set to the end of the sprint containing the last allocation
+    ///
+    /// Call this after adding, removing, or modifying allocations for a project.
+    pub fn update_technical_project_dates(&mut self, technical_project_id: &Uuid) {
+        use crate::utils::date_helpers::get_sprint_boundaries;
+
+        // Find all weeks with allocations for this project
+        let mut allocation_weeks: Vec<NaiveDate> = self
+            .allocations
+            .iter()
+            .filter(|alloc| {
+                alloc
+                    .assignments
+                    .iter()
+                    .any(|a| a.technical_project_id == *technical_project_id)
+            })
+            .map(|alloc| alloc.week_start_date)
+            .collect();
+
+        // If no allocations, leave dates unchanged
+        if allocation_weeks.is_empty() {
+            return;
+        }
+
+        // Sort to find first and last weeks
+        allocation_weeks.sort();
+        let first_week = allocation_weeks[0];
+        let last_week = allocation_weeks[allocation_weeks.len() - 1];
+
+        // Calculate sprint boundaries
+        let (first_sprint_start, _) = get_sprint_boundaries(
+            first_week,
+            self.quarter_start_date,
+            self.sprint_length_weeks,
+        );
+        let (_, last_sprint_end) =
+            get_sprint_boundaries(last_week, self.quarter_start_date, self.sprint_length_weeks);
+
+        // Update the technical project
+        if let Some(project) = self
+            .technical_projects
+            .iter_mut()
+            .find(|p| p.id == *technical_project_id)
+        {
+            project.start_date = first_sprint_start;
+            project.expected_completion = Some(last_sprint_end);
+        }
+    }
 }
 
 /// Determine capacity badge status based on allocated vs estimated

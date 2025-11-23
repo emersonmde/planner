@@ -93,9 +93,25 @@ pub fn AllocationView() -> Element {
             if let Some((team_member_id, week_start)) = focused_cell() {
                 // Clear allocation
                 plan.with_mut(|p| {
+                    // Find which project(s) were allocated to update their dates
+                    let affected_projects: Vec<uuid::Uuid> = p
+                        .allocations
+                        .iter()
+                        .filter(|a| {
+                            a.team_member_id == team_member_id && a.week_start_date == week_start
+                        })
+                        .flat_map(|a| &a.assignments)
+                        .map(|assignment| assignment.technical_project_id)
+                        .collect();
+
                     p.allocations.retain(|a| {
                         !(a.team_member_id == team_member_id && a.week_start_date == week_start)
                     });
+
+                    // Update dates for all affected projects
+                    for project_id in affected_projects {
+                        p.update_technical_project_dates(&project_id);
+                    }
                 });
             }
         }
@@ -126,6 +142,18 @@ pub fn AllocationView() -> Element {
             if let Some((team_member_id, week_start)) = focused_cell() {
                 if let Some(assignments) = clipboard() {
                     plan.with_mut(|p| {
+                        // Find which project(s) were previously allocated
+                        let previous_projects: Vec<uuid::Uuid> = p
+                            .allocations
+                            .iter()
+                            .filter(|a| {
+                                a.team_member_id == team_member_id
+                                    && a.week_start_date == week_start
+                            })
+                            .flat_map(|a| &a.assignments)
+                            .map(|assignment| assignment.technical_project_id)
+                            .collect();
+
                         // Remove existing allocation
                         p.allocations.retain(|a| {
                             !(a.team_member_id == team_member_id && a.week_start_date == week_start)
@@ -133,8 +161,23 @@ pub fn AllocationView() -> Element {
 
                         // Add new allocation with copied assignments
                         let mut alloc = Allocation::new(team_member_id, week_start);
-                        alloc.assignments = assignments;
+                        alloc.assignments = assignments.clone();
                         p.allocations.push(alloc);
+
+                        // Update dates for newly pasted projects
+                        for assignment in &assignments {
+                            p.update_technical_project_dates(&assignment.technical_project_id);
+                        }
+
+                        // Update dates for previously assigned projects
+                        for prev_project_id in previous_projects {
+                            if !assignments
+                                .iter()
+                                .any(|a| a.technical_project_id == prev_project_id)
+                            {
+                                p.update_technical_project_dates(&prev_project_id);
+                            }
+                        }
                     });
                 }
             }
@@ -212,9 +255,26 @@ pub fn AllocationView() -> Element {
                 MenuAction::ClearAssignment => {
                     // Clear allocation
                     plan.with_mut(|p| {
+                        // Find which project(s) were allocated to update their dates
+                        let affected_projects: Vec<uuid::Uuid> = p
+                            .allocations
+                            .iter()
+                            .filter(|a| {
+                                a.team_member_id == team_member_id
+                                    && a.week_start_date == week_start
+                            })
+                            .flat_map(|a| &a.assignments)
+                            .map(|assignment| assignment.technical_project_id)
+                            .collect();
+
                         p.allocations.retain(|a| {
                             !(a.team_member_id == team_member_id && a.week_start_date == week_start)
                         });
+
+                        // Update dates for all affected projects
+                        for project_id in affected_projects {
+                            p.update_technical_project_dates(&project_id);
+                        }
                     });
                 }
             }
@@ -226,6 +286,17 @@ pub fn AllocationView() -> Element {
         if let Some((team_member_id, week_start)) = context_menu_cell() {
             if let Some(proj_id) = assign_project_id() {
                 plan.with_mut(|p| {
+                    // Find which project(s) were previously allocated
+                    let previous_projects: Vec<uuid::Uuid> = p
+                        .allocations
+                        .iter()
+                        .filter(|a| {
+                            a.team_member_id == team_member_id && a.week_start_date == week_start
+                        })
+                        .flat_map(|a| &a.assignments)
+                        .map(|assignment| assignment.technical_project_id)
+                        .collect();
+
                     // Remove existing allocation
                     p.allocations.retain(|a| {
                         !(a.team_member_id == team_member_id && a.week_start_date == week_start)
@@ -235,6 +306,16 @@ pub fn AllocationView() -> Element {
                     let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
                     alloc.assignments = vec![crate::models::Assignment::new(proj_id, 100.0)];
                     p.allocations.push(alloc);
+
+                    // Update dates for newly assigned project
+                    p.update_technical_project_dates(&proj_id);
+
+                    // Update dates for previously assigned projects
+                    for prev_project_id in previous_projects {
+                        if prev_project_id != proj_id {
+                            p.update_technical_project_dates(&prev_project_id);
+                        }
+                    }
                 });
             }
 
@@ -255,6 +336,18 @@ pub fn AllocationView() -> Element {
             if let (Some(proj1_id), Some(proj2_id)) = (split_project1_id(), split_project2_id()) {
                 if proj1_id != proj2_id {
                     plan.with_mut(|p| {
+                        // Find which project(s) were previously allocated
+                        let previous_projects: Vec<uuid::Uuid> = p
+                            .allocations
+                            .iter()
+                            .filter(|a| {
+                                a.team_member_id == team_member_id
+                                    && a.week_start_date == week_start
+                            })
+                            .flat_map(|a| &a.assignments)
+                            .map(|assignment| assignment.technical_project_id)
+                            .collect();
+
                         // Remove existing allocation
                         p.allocations.retain(|a| {
                             !(a.team_member_id == team_member_id && a.week_start_date == week_start)
@@ -267,6 +360,17 @@ pub fn AllocationView() -> Element {
                             crate::models::Assignment::new(proj2_id, 100.0 - split_percentage()),
                         ];
                         p.allocations.push(alloc);
+
+                        // Update dates for newly assigned projects
+                        p.update_technical_project_dates(&proj1_id);
+                        p.update_technical_project_dates(&proj2_id);
+
+                        // Update dates for previously assigned projects
+                        for prev_project_id in previous_projects {
+                            if prev_project_id != proj1_id && prev_project_id != proj2_id {
+                                p.update_technical_project_dates(&prev_project_id);
+                            }
+                        }
                     });
 
                     // Close modal and reset
@@ -312,6 +416,17 @@ pub fn AllocationView() -> Element {
             // Direct assign mode - assign to cell and close panel
             if let Some((team_member_id, week_start)) = context_menu_cell() {
                 plan.with_mut(|p| {
+                    // Find which project(s) were previously allocated
+                    let previous_projects: Vec<uuid::Uuid> = p
+                        .allocations
+                        .iter()
+                        .filter(|a| {
+                            a.team_member_id == team_member_id && a.week_start_date == week_start
+                        })
+                        .flat_map(|a| &a.assignments)
+                        .map(|assignment| assignment.technical_project_id)
+                        .collect();
+
                     // Remove existing allocation
                     p.allocations.retain(|a| {
                         !(a.team_member_id == team_member_id && a.week_start_date == week_start)
@@ -321,6 +436,16 @@ pub fn AllocationView() -> Element {
                     let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
                     alloc.assignments = vec![crate::models::Assignment::new(project_id, 100.0)];
                     p.allocations.push(alloc);
+
+                    // Update dates for newly assigned project
+                    p.update_technical_project_dates(&project_id);
+
+                    // Update dates for previously assigned projects
+                    for prev_project_id in previous_projects {
+                        if prev_project_id != project_id {
+                            p.update_technical_project_dates(&prev_project_id);
+                        }
+                    }
                 });
             }
             panel_visible.set(false);
