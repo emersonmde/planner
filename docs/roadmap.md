@@ -4,10 +4,10 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 
 ## Progress Status
 
-**Current Status:** Milestone 10 Complete (10 of 17 milestones)
+**Current Status:** Milestone 11 Complete (11 of 17 milestones)
 
-- ✅ Milestones 1-10 Complete (see summary below)
-- 📋 **Milestones 11-17**: Planned for v1.0
+- ✅ Milestones 1-11 Complete (see summary below)
+- 📋 **Milestones 12-17**: Planned for v1.0
 
 **Build Status:** ✅ Compiles successfully
 
@@ -65,7 +65,7 @@ Before marking any milestone as complete, the following steps must be completed:
 
 ---
 
-## Completed Milestones (1-10) - Summary
+## Completed Milestones (1-11) - Summary
 
 ### M1-4: Foundation & Core Views ✅
 - Dioxus 0.7 setup, design system (theme.css), component library
@@ -111,12 +111,19 @@ Before marking any milestone as complete, the following steps must be completed:
 - Full CRUD operations, cascade behavior (delete unlinks technical projects)
 - ConfirmationDialog for destructive actions
 
+### M11: Technical Projects CRUD ✅
+- **Important**: Full CRUD for technical projects with "+ New Technical Project" button
+- Modal-based editing with roadmap project linking (dropdown with "None" option)
+- Inline validation for name and estimates
+- Delete with cascade behavior (removes all allocations)
+- Color inheritance from linked roadmap projects
+
 ---
 
 ## Milestone 11: Technical Projects Management (CRUD Operations)
 **Goal:** Enable full create, read, update, delete operations for technical projects
 
-**Status:** 📋 Not Started
+**Status:** ✅ Complete
 **Estimated Effort:** 2-3 days
 
 ### Context
