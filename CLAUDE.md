@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Quarterly Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and file-based persistence.
 
-**Status:** Milestone 9 Complete (State Architecture Refactor). The app now uses a two-signal architecture (Preferences + PlanState) for better reactivity and localStorage persistence. Includes interactive allocation grid, paintbrush mode, tooltips, and self-contained export format ready for M13. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
+**Status:** Milestone 10 Complete (Roadmap Projects CRUD). The app now uses a two-signal architecture (Preferences + PlanState) for better reactivity and localStorage persistence. Full CRUD operations for roadmap projects with modal-based editing, inline validation, and cascade behavior. Includes interactive allocation grid, paintbrush mode, tooltips, and self-contained export format ready for M13. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
 
 ## Development Commands
 

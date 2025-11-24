@@ -67,502 +67,49 @@ Before marking any milestone as complete, the following steps must be completed:
 
 ## Completed Milestones (1-10) - Summary
 
-### Milestone 1-4: Foundation & Core Views ✅
-**Key Deliverables:**
-- Project setup with Dioxus 0.7, design system (theme.css), component library
-- Three main views: Roadmap, Technical Projects, Allocation Grid
-- Static data display with mock data, view switching via TopNav
-- CSS design tokens, spacing system, color palette
+### M1-4: Foundation & Core Views ✅
+- Dioxus 0.7 setup, design system (theme.css), component library
+- Three views: Roadmap, Technical Projects, Allocation Grid
+- View switching via TopNav, CSS design tokens
 
-### Milestone 5: Technical Projects View ✅
-**Key Deliverables:**
-- Side panel with filters (All, On Track, At Risk, No Roadmap Link)
-- Sorting options (Roadmap Project, Status, Allocation)
-- Search functionality
+### M5: Technical Projects View ✅
+- Side panel with filters, sorting, and search
 - Project status badges with capacity calculations
 
-### Milestone 6: Interactive Allocation Grid (Paintbrush Mode) ✅
-**Key Deliverables:**
+### M6: Interactive Allocation Grid (Paintbrush Mode) ✅
 - Paintbrush mode for rapid weekly allocation
-- Project selector with color-coded projects
-- Cell click to allocate, state management for allocations
-- Visual feedback (success pulse, project colors)
+- Project selector with color-coded projects, visual feedback
 
-### Milestone 6.5: Grid Layout Rotation ✅
-**Key Deliverables:**
-- Rotated grid: engineers as columns, weeks as rows
-- Vertical scrolling UX (more natural for 13+ weeks)
-- Sticky headers (engineer headers top, week headers left)
-- Horizontal sprint separators every 2 weeks
+### M6.5: Grid Layout Rotation ✅
+- Rotated grid: engineers as columns, weeks as rows (vertical scrolling)
+- Sticky headers, sprint separators every 2 weeks
 
-### Milestone 6.6: UI/UX Refinements (Floating FAB) ✅
-**Key Deliverables:**
-- Floating Action Button (FAB) in bottom-right for paintbrush mode
-- Slide-out project selector panel (replaces horizontal bar)
-- Reclaimed 80-100px vertical space
-- Collapse/expand panel functionality
-- Search and filter in panel
+### M6.6: Floating FAB for Paintbrush Mode ✅
+- **Important**: Floating Action Button (FAB) in bottom-right for paintbrush mode
+- Slide-out project selector panel, collapse/expand functionality
+- FAB is dedicated to paintbrush mode, not for adding projects
 
-### Milestone 7: Context Menu & Keyboard Shortcuts ✅
-**Key Deliverables:**
-- Right-click context menu (Assign Project, Split Allocation, Clear)
-- Keyboard shortcuts: Copy (Cmd/Ctrl+C), Paste (Cmd/Ctrl+V), Delete/Backspace
-- Keybindings help overlay (press `?`)
-- Split allocation modal with live preview
-- Removed oncall special handling (now regular project)
+### M7: Context Menu & Keyboard Shortcuts ✅
+- Right-click context menu (Assign, Split, Clear)
+- Keyboard shortcuts: Copy/Paste (Cmd/Ctrl+C/V), Delete/Backspace
+- Split allocation modal with live preview, keybindings help overlay (`?`)
 
-### Milestone 8: Tooltip System & Auto-Date Updates ✅
-**Key Deliverables:**
-- Hover tooltips for grid cells (project info, allocation %, status)
-- Engineer header tooltips (capacity, current projects, utilization)
-- 500ms hover delay, glassmorphism effect
+### M8: Tooltip System & Auto-Date Updates ✅
+- Hover tooltips for grid cells and engineer headers (500ms delay)
 - Auto-update project start/end dates based on allocations
 - Sprint boundary calculation helpers
 
-### Milestone 9: State Architecture Refactor ✅
-**Key Deliverables:**
-- Two-signal architecture: `use_preferences()` and `use_plan_state()`
+### M9: State Architecture Refactor ✅
+- **Important**: Two-signal architecture: `use_preferences()` + `use_plan_state()`
 - localStorage persistence for team preferences
-- PlanExport model for self-contained export format
-- Global sprint anchor date (vs quarter-relative)
-- Updated all components to use two-signal pattern
-- ADR-004 documenting architecture decisions
+- PlanExport model for self-contained export format (enables v2.0 multi-team)
+- Global sprint anchor date, ADR-004 documenting decisions
 
-### Milestone 10: Roadmap Projects Management (CRUD Operations) ✅
-**Key Deliverables:**
-- ColorPicker component (9 color swatches, keyboard accessible)
-- RoadmapProjectModal for Add/Edit operations with inline validation
+### M10: Roadmap Projects CRUD ✅
+- **Important**: Modal-based editing pattern with "+ New Roadmap Project" button
+- ColorPicker component, inline validation (errors below fields, not toasts)
+- Full CRUD operations, cascade behavior (delete unlinks technical projects)
 - ConfirmationDialog for destructive actions
-- Full CRUD: Add, Edit, Delete roadmap projects
-- Cascade behavior: Deleting roadmap unlinks (not deletes) technical projects
-- Icon buttons (edit ⚙, delete 🗑) with visual feedback
-
----
-
-## Milestone 9: State Architecture Refactor
-**Goal:** Split monolithic Plan state into two signals for optimal reactivity, persistence, and prepare for 1.0 export/import
-
-**Status:** ✅ Complete
-**Estimated Effort:** 2-3 days (includes spike)
-
-### Context
-
-Currently, we use a single `Signal<Plan>` containing all state. This has several issues:
-
-**Problem 1 - Reactivity**: Dioxus tracks changes at the signal level. When you write to `plan.write().team_members.push()`, Dioxus marks the ENTIRE signal as dirty, triggering re-renders for ALL components that call `plan()`, even if they only read allocations.
-
-**Problem 2 - Persistence**: We need two different persistence strategies:
-- **Team preferences** (persisted in localStorage between sessions)
-- **Planning data** (exported/imported per quarter, shareable)
-
-**Problem 3 - Export Portability**: Plans must be self-contained for sharing. If Alice exports her plan and sends it to Bob, he needs to see all team member names/roles/capacity - not just UUIDs.
-
-**Solution**: Split into two independent signals:
-- `preferences`: Team roster, sprint config (persisted localStorage, rarely changes)
-- `plan_state`: Roadmap projects, technical projects, allocations (exported/imported, changes frequently)
-
-### Design Decision: Two-Signal Architecture
-
-**Before (Current - Milestone 8)**:
-```rust
-// Single signal - any change triggers all consumers
-let plan = use_signal(|| Plan {
-    team_members, roadmap_projects, technical_projects, allocations, ...
-});
-
-// Problem: This re-renders even when only allocations change
-fn TeamMemberHeader(plan: Signal<Plan>) -> Element {
-    let members = plan().team_members; // Re-renders on ANY plan change!
-    ...
-}
-```
-
-**After (Milestone 9)**:
-```rust
-// Two independent signals
-let preferences = use_signal(|| Preferences {
-    team_name,          // NEW: "Backend Team"
-    team_members,       // Engineers/scientists roster
-    sprint_anchor_date, // Global sprint start reference
-    sprint_length_weeks,
-    default_capacity,
-});
-
-let plan_state = use_signal(|| PlanState {
-    quarter_name, quarter_start_date, num_weeks,
-    roadmap_projects, technical_projects, allocations,
-    metadata,  // version, created_at, modified_at
-});
-
-// Now: Only re-renders when team_members actually change
-fn TeamMemberHeader(preferences: Signal<Preferences>) -> Element {
-    let members = preferences().team_members; // Isolated reactivity!
-    ...
-}
-```
-
-**Self-Contained Export Format**:
-```rust
-// Export combines both signals + includes team snapshot
-pub struct PlanExport {
-    pub version: String,  // "1.0"
-    pub metadata: PlanMetadata,
-
-    // TEAM CONTEXT (snapshot at export time)
-    pub team_name: String,              // "Backend Team"
-    pub team_members: Vec<TeamMember>,  // Full roster for portability
-
-    // PLANNING DATA
-    pub quarter_name: String,
-    pub quarter_start_date: NaiveDate,
-    pub num_weeks: usize,
-    pub roadmap_projects: Vec<RoadmapProject>,
-    pub technical_projects: Vec<TechnicalProject>,
-    pub allocations: Vec<Allocation>,
-}
-```
-
-**Why This Works**:
-- ✅ **1.0 Sharing**: Alice exports → Bob imports and sees all names/roles correctly
-- ✅ **1.0 Persistence**: Team roster persists in localStorage, plans are exported
-- ✅ **Post-1.0 Multi-Team**: Sr Managers can load multiple team plans and aggregate (see Post-1.0 section)
-
-### Tasks
-
-#### 9.1: Spike - Storage & Serialization Strategy
-**Duration:** 2-4 hours
-
-**Research:**
-1. **Dioxus storage plugins**
-   - Evaluate `dioxus-storage` crate for web localStorage
-   - Test cross-platform compatibility (web + desktop)
-   - Determine if we need custom wrapper for desktop
-
-2. **Serialization format**
-   - JSON (human-readable, debuggable) - RECOMMENDED for v1.0
-   - MessagePack (smaller, faster) - consider for post-1.0
-
-3. **File vs Base64 for plan export**
-   - File I/O: Simpler UX, requires file system access
-   - Base64: Copy/paste friendly, no file system needed
-   - **Recommendation**: Support BOTH (file primary, base64 fallback)
-
-**Deliverable**: ADR document (`docs/adrs/ADR-004-state-persistence.md`) with:
-- Storage plugin choice (dioxus-storage vs custom)
-- Serialization format (JSON for v1.0)
-- Export strategy (both file + base64)
-- Self-contained export rationale (portability + future aggregation)
-- Migration plan for existing users (if applicable)
-
-#### 9.2: Create Preferences Model
-- **New file**: `src/models/preferences.rs`
-  ```rust
-  #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-  pub struct Preferences {
-      pub team_name: String,               // NEW: "Backend Team", "Data Science", etc.
-      pub team_members: Vec<TeamMember>,   // Engineers/scientists roster
-      pub sprint_anchor_date: NaiveDate,   // Global sprint start reference
-      pub sprint_length_weeks: usize,      // Sprint duration (e.g., 2 weeks)
-      pub default_capacity: f32,           // Default weeks per person
-  }
-  ```
-- **Default values**:
-  - `team_name`: "My Team" (user can edit in preferences)
-  - `sprint_anchor_date`: Jan 1, 2024 (Monday)
-  - `sprint_length_weeks`: 2
-  - `default_capacity`: 12.0
-- **Validation**: Capacity > 0, sprint length 1-4 weeks, team_name not empty
-
-#### 9.3: Create PlanState Model
-- **New file**: `src/models/plan_state.rs`
-  ```rust
-  #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-  pub struct PlanState {
-      pub quarter_name: String,            // "Q1 2025"
-      pub quarter_start_date: NaiveDate,   // First Monday of quarter
-      pub num_weeks: usize,                // Typically 13
-      pub roadmap_projects: Vec<RoadmapProject>,
-      pub technical_projects: Vec<TechnicalProject>,
-      pub allocations: Vec<Allocation>,
-      pub metadata: PlanMetadata,
-  }
-
-  #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-  pub struct PlanMetadata {
-      pub version: String,          // "1.0"
-      pub created_at: DateTime<Utc>,
-      pub modified_at: DateTime<Utc>,
-  }
-  ```
-
-#### 9.4: Create PlanExport Model
-- **New file**: `src/models/plan_export.rs`
-  ```rust
-  #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-  pub struct PlanExport {
-      pub version: String,
-      pub metadata: PlanMetadata,
-
-      // Team context snapshot
-      pub team_name: String,
-      pub team_members: Vec<TeamMember>,
-
-      // Planning data
-      pub quarter_name: String,
-      pub quarter_start_date: NaiveDate,
-      pub num_weeks: usize,
-      pub roadmap_projects: Vec<RoadmapProject>,
-      pub technical_projects: Vec<TechnicalProject>,
-      pub allocations: Vec<Allocation>,
-  }
-
-  impl PlanExport {
-      pub fn from_signals(prefs: Preferences, state: PlanState) -> Self {
-          // Combine preferences + plan_state into self-contained export
-      }
-  }
-  ```
-
-#### 9.5: Refactor Plan Model (Keep for Backward Compatibility)
-- **Update** `src/models/plan.rs`:
-  ```rust
-  // Keep Plan struct as a temporary wrapper during migration
-  pub struct Plan {
-      pub preferences: Preferences,
-      pub plan_state: PlanState,
-  }
-
-  impl Plan {
-      // Keep ALL existing methods - forward to inner structs
-      pub fn get_team_member(&self, id: &Uuid) -> Option<&TeamMember> {
-          self.preferences.team_members.iter().find(|e| &e.id == id)
-      }
-
-      pub fn get_roadmap_project(&self, id: &Uuid) -> Option<&RoadmapProject> {
-          self.plan_state.roadmap_projects.iter().find(|p| &p.id == id)
-      }
-
-      // ... all other methods stay the same, just delegate
-  }
-  ```
-- **Note**: Plan struct can be deprecated in M10+ once all components use direct signal access
-
-#### 9.6: Update State Management
-- **Refactor** `src/state.rs`:
-  ```rust
-  // OLD: Single signal
-  pub fn use_plan_state() -> Signal<Plan> { ... }
-
-  // NEW: Two signals via context
-  #[derive(Clone, Copy)]
-  pub struct AppContext {
-      pub preferences: Signal<Preferences>,
-      pub plan_state: Signal<PlanState>,
-  }
-
-  pub fn use_preferences() -> Signal<Preferences> {
-      use_context::<AppContext>().preferences
-  }
-
-  pub fn use_plan_state() -> Signal<PlanState> {
-      use_context::<AppContext>().plan_state
-  }
-  ```
-- **Update** `create_sample_plan()` to return `(Preferences, PlanState)` tuple
-- **Update** `main.rs` app setup:
-  ```rust
-  fn App() -> Element {
-      let (prefs, state) = create_sample_plan();
-      use_context_provider(|| AppContext {
-          preferences: Signal::new(prefs),
-          plan_state: Signal::new(state),
-      });
-      ...
-  }
-  ```
-
-#### 9.7: Update All Component State Access
-**Affected Components** (~15 files):
-- `allocation_view.rs`: Read both signals (team members + allocations)
-- `roadmap_view.rs`: Read `plan_state` only (roadmap projects)
-- `technical_view.rs`: Read `plan_state` only (technical projects)
-- `top_nav.rs`: Read both signals (capacity calculations)
-- `paintbrush.rs`: Mutate `plan_state` only
-- `grid_helpers.rs`: Read both signals (cell variant calculation)
-- All other views and components
-
-**Pattern for Updates**:
-```rust
-// BEFORE (M8):
-let plan = use_plan_state();
-let members = plan().team_members;
-plan.write().allocations.push(alloc);
-
-// AFTER (M9):
-let preferences = use_preferences();
-let plan_state = use_plan_state();
-let members = preferences().team_members;
-plan_state.write().allocations.push(alloc);
-```
-
-**Estimated Effort**: ~4-6 hours (find/replace + manual verification)
-
-#### 9.8: Implement Preferences Persistence
-- **Add dependency**: `dioxus-storage` or implement custom localStorage wrapper
-- **Auto-save preferences** on change (debounced 1 second):
-  ```rust
-  use_effect(move || {
-      let prefs = preferences();
-      save_to_localstorage("planner_preferences", &prefs);
-  });
-  ```
-- **Load on startup**:
-  ```rust
-  fn App() -> Element {
-      let saved_prefs = load_from_localstorage("planner_preferences")
-          .unwrap_or_else(|| create_default_preferences());
-      ...
-  }
-  ```
-- **Migration logic**: First-time users get default sample data
-
-#### 9.9: Update Sprint Calculation Logic
-- **Refactor** `get_sprint_boundaries()` in `src/utils/date_helpers.rs`:
-  ```rust
-  // BEFORE: Uses quarter_start_date (quarter-relative)
-  pub fn get_sprint_boundaries(
-      week_start: NaiveDate,
-      quarter_start: NaiveDate,  // ← Remove this
-      sprint_length_weeks: usize,
-  ) -> (NaiveDate, NaiveDate)
-
-  // AFTER: Uses global sprint_anchor_date
-  pub fn get_sprint_boundaries(
-      week_start: NaiveDate,
-      sprint_anchor_date: NaiveDate,  // ← New global anchor
-      sprint_length_weeks: usize,
-  ) -> (NaiveDate, NaiveDate) {
-      // Calculate which sprint this week belongs to relative to anchor
-      let days_since_anchor = (week_start - sprint_anchor_date).num_days();
-      let weeks_since_anchor = days_since_anchor / 7;
-      let sprint_index = weeks_since_anchor.div_floor(sprint_length_weeks as i64);
-
-      let sprint_start = sprint_anchor_date + Duration::weeks(sprint_index * sprint_length_weeks as i64);
-      let sprint_end = sprint_start + Duration::weeks(sprint_length_weeks as i64) - Duration::days(1);
-
-      (sprint_start, sprint_end)
-  }
-  ```
-- **Update all call sites** (~10 locations):
-  - `allocation_view.rs`
-  - `paintbrush.rs`
-  - `plan.rs` (`update_technical_project_dates`)
-- **Update unit tests** to use global anchor
-
-### Acceptance Criteria
-- ✅ ADR-004 documents storage and serialization decisions
-- ✅ Preferences and PlanState models created with serde traits
-- ✅ PlanExport model created (self-contained format)
-- ✅ State split into two independent signals (preferences + plan_state)
-- ✅ All components updated to use new two-signal pattern
-- ✅ Preferences auto-save to localStorage on change
-- ✅ Preferences load from localStorage on startup
-- ✅ Sprint boundaries calculated from global anchor date
-- ✅ All existing features work unchanged (allocation grid, paintbrush, etc.)
-- ✅ Build passes (`dx build`)
-- ✅ Tests pass (`cargo test`)
-- ✅ No regressions in functionality
-
-### Development Notes
-- **Testing**: Update existing unit tests for new state structure as you refactor
-- **Incremental Approach**: Refactor one component at a time, verify it works before moving to next
-- **Backward Compatibility**: Keep `Plan` wrapper struct temporarily to minimize breaking changes
-- **Why Two Signals (Not Three)**: VDOM diffing handles re-renders efficiently. Two signals match business domain (team vs plan) without over-engineering.
-
----
-
-## Milestone 10: Roadmap Projects Management (CRUD Operations)
-**Goal:** Enable full create, read, update, delete operations for roadmap projects
-
-**Status:** ✅ Complete
-**Estimated Effort:** 2-3 days
-
-### Context
-Currently, roadmap projects are read-only with static sample data. Users need to add, edit, and remove roadmap projects to plan their quarter effectively.
-
-**State Access Pattern** (after M9 refactor):
-```rust
-let plan_state = use_plan_state();
-plan_state.write().roadmap_projects.push(new_project);
-```
-
-### Tasks
-
-#### 10.1: Add New Roadmap Project
-- **Create "Add Roadmap Project" modal**
-  - Trigger: "+ New Roadmap Project" button in RoadmapView
-  - Form fields: Project name, Eng estimate, Sci estimate, Start date, Launch date, Notes (optional), Color picker
-  - **Inline validation**: Required fields (show error below field), dates (start < launch), estimates > 0
-  - Cancel/Save buttons
-- **Wire up to state management**
-  - Call `plan_state.write().roadmap_projects.push(new_project)`
-  - Close modal on save
-  - Update RoadmapView table reactively
-- **Success feedback**: Modal closes, new row appears in table (no toast needed)
-
-#### 10.2: Edit Existing Roadmap Project
-- **Modal editing** (simpler than inline)
-  - Click "Edit" button (gear icon) in row
-  - Reuse Add Project modal, pre-filled with current values
-  - Update project in `plan_state.write().roadmap_projects`
-- **Inline validation**
-  - Same validation as Add
-  - Prevent invalid states (empty name, negative estimates)
-  - Show errors below fields, not in toasts
-
-#### 10.3: Delete Roadmap Project
-- **Add delete button** (trash icon) to each row
-- **Confirmation dialog**
-  - "Delete [Project Name]?"
-  - "This will unlink X technical projects. Continue?"
-  - Cancel/Delete buttons
-- **Cascade behavior**
-  - Unlink all technical projects (`roadmap_project_id = None`)
-  - Do NOT delete technical projects or allocations
-  - Show warning if technical projects will be orphaned
-- **State update**
-  - Remove from `plan_state.write().roadmap_projects`
-  - Update dependent views
-- **Success feedback**: Row animates out, table updates (no toast)
-
-#### 10.4: Color Picker Component
-- **Create reusable ColorPicker component** (`src/components/ui/color_picker.rs`)
-  - Display all 9 ProjectColor variants as swatches
-  - Selected state (border highlight)
-  - Accessible (keyboard navigable, ARIA labels)
-- **Integration**
-  - Use in Add/Edit Roadmap Project modal
-  - Default to Blue if not selected
-
-### Acceptance Criteria
-- ✅ User can add new roadmap projects via modal
-- ✅ User can edit roadmap projects
-- ✅ User can delete roadmap projects with confirmation
-- ✅ Inline validation prevents invalid data (errors shown below fields)
-- ✅ Technical projects are unlinked (not deleted) when roadmap project is removed
-- ✅ All changes immediately reflect in RoadmapView table
-- ✅ State persists during session (pre-export)
-- ✅ Build passes (`dx build`)
-
-### Design References
-- Modal styling: `docs/ui-design.md` Section 5.4 (Split Allocation Modal)
-- Form inputs: `docs/component-reference.md` Section 4 (Input)
-- Color picker: `docs/ui-design.md` Section 2 (Project Color Palette)
-- Validation: Inline errors (not toasts) for accessibility
-
-### Development Notes
-- **Testing**: Write unit tests for validation logic as you implement
-- **No Toasts**: Use modal close + table updates for success, inline errors for validation failures
 
 ---
 
@@ -573,7 +120,7 @@ plan_state.write().roadmap_projects.push(new_project);
 **Estimated Effort:** 2-3 days
 
 ### Context
-Technical projects are the implementation work linked to roadmap projects. Users need full CRUD to plan detailed work breakdown. The floating FAB exists but doesn't function yet.
+Technical projects are the implementation work linked to roadmap projects. Users need full CRUD to plan detailed work breakdown.
 
 **State Access Pattern**:
 ```rust
@@ -584,9 +131,9 @@ plan_state.write().technical_projects.push(new_project);
 ### Tasks
 
 #### 11.1: Add New Technical Project
-- **Wire up Floating FAB**
-  - Currently displays but doesn't open modal
-  - Click should open "Add Technical Project" modal
+- **Create "+ New Technical Project" button** in TechnicalView
+  - Matches the pattern from M10 (Roadmap Projects)
+  - Opens "Add Technical Project" modal on click
 - **Create "Add Technical Project" modal**
   - Form fields: Project name, Link to roadmap project (dropdown), Estimated weeks, Start date (optional - auto-calculated), Expected completion (optional - auto-calculated), Notes (optional)
   - Roadmap project dropdown: All roadmap projects + "None" option
@@ -633,7 +180,7 @@ plan_state.write().technical_projects.push(new_project);
   - Roadmap project column updates immediately
 
 ### Acceptance Criteria
-- ✅ Floating FAB opens "Add Technical Project" modal
+- ✅ "+ New Technical Project" button opens modal (matching M10 pattern)
 - ✅ User can create technical projects with roadmap links
 - ✅ User can edit technical projects
 - ✅ User can delete technical projects with cascade to allocations
