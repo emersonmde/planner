@@ -120,39 +120,44 @@ pub fn create_sample_plan() -> (Preferences, PlanState) {
     plan_state.roadmap_projects.push(payment_project);
     plan_state.roadmap_projects.push(data_project);
 
-    // Create technical projects
+    // Create technical projects (with eng_estimate, sci_estimate split)
     let auth_service = TechnicalProject::new(
         "Auth Service Refactor".to_string(),
         Some(platform_roadmap_id),
-        6.0,
+        6.0, // eng_estimate
+        0.0, // sci_estimate
         NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
     );
 
     let payment_api = TechnicalProject::new(
         "Payment API Integration".to_string(),
         Some(payment_roadmap_id),
-        8.0,
+        8.0, // eng_estimate
+        0.0, // sci_estimate
         NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
     );
 
     let ml_pipeline = TechnicalProject::new(
         "ML Pipeline Optimization".to_string(),
         Some(platform_roadmap_id),
-        12.0,
+        6.0, // eng_estimate
+        6.0, // sci_estimate
         NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
     );
 
     let data_pipeline = TechnicalProject::new(
         "Data Pipeline Migration".to_string(),
         Some(data_roadmap_id),
-        10.0,
+        6.0, // eng_estimate
+        4.0, // sci_estimate
         NaiveDate::from_ymd_opt(2025, 1, 20).unwrap(),
     );
 
     let research = TechnicalProject::new(
         "Algorithm Research".to_string(),
         Some(data_roadmap_id),
-        6.0,
+        0.0, // eng_estimate
+        6.0, // sci_estimate
         NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
     );
 

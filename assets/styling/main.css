@@ -227,6 +227,11 @@
   color: var(--primary-50);
 }
 
+.status-badge.neutral {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
 /* ===== INPUT ===== */
 .search-input {
   width: 300px;
@@ -2033,6 +2038,12 @@
   gap: var(--space-md);
 }
 
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-md);
+}
+
 .form-error {
   font-size: var(--font-size-caption);
   color: var(--error-50);
@@ -2116,6 +2127,82 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .textarea::placeholder {
   color: var(--text-tertiary);
+}
+
+/* Form hints (helper text below fields) */
+.form-hint {
+  font-size: var(--font-size-caption);
+  color: var(--text-tertiary);
+  margin-top: var(--space-xs);
+  font-style: italic;
+}
+
+/* Select dropdown */
+.select {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  cursor: pointer;
+  transition: all var(--transition-quick);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+}
+
+.select:hover {
+  border-color: var(--border-emphasis);
+  background-color: var(--bg-secondary);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--primary-50);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.1);
+}
+
+.select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: var(--space-sm);
+}
+
+/* Dropdown with color indicator */
+.dropdown-with-color {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.dropdown-with-color .color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  transition: background-color var(--transition-quick);
+}
+
+.dropdown-with-color .select {
+  flex: 1;
+}
+
+/* Technical project modal */
+.technical-project-modal {
+  width: 520px;
+}
+
+/* Technical view table has 11 columns - override the default grid */
+.technical-view .table-header,
+.technical-view .table-row {
+  grid-template-columns: 200px 140px 80px 80px 80px 90px 90px 90px 120px 80px 80px;
 }
 
 /* ========== Color Picker ========== */

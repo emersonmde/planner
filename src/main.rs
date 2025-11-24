@@ -63,6 +63,8 @@ fn App() -> Element {
     let active_view = use_signal(|| View::Allocation);
 
     rsx! {
+        // Critical CSS to prevent white flash on load
+        document::Style { "html, body {{ background-color: #0f0f11; }}" }
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: THEME_CSS }
         document::Link { rel: "stylesheet", href: MAIN_CSS }

@@ -14,6 +14,7 @@ mod input;
 mod keybindings_overlay;
 mod roadmap_project_modal;
 mod split_modal;
+mod technical_project_modal;
 
 pub use assign_project_modal::AssignProjectModal;
 pub use badge::{Badge, BadgeType};
@@ -31,3 +32,4 @@ pub use input::Input;
 pub use keybindings_overlay::KeybindingsOverlay;
 pub use roadmap_project_modal::{ModalMode, RoadmapProjectModal};
 pub use split_modal::SplitAllocationModal;
+pub use technical_project_modal::{TechnicalModalMode, TechnicalProjectModal};

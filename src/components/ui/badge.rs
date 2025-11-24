@@ -9,6 +9,8 @@ pub enum BadgeType {
     Error,
     #[allow(dead_code)] // Reserved for informational badges in future UI
     Info,
+    /// Neutral state - no status indication (e.g., 0/0 allocation)
+    Neutral,
 }
 
 #[component]
@@ -23,6 +25,7 @@ pub fn Badge(
         BadgeType::Warning => "status-badge warning",
         BadgeType::Error => "status-badge error",
         BadgeType::Info => "status-badge info",
+        BadgeType::Neutral => "status-badge neutral",
     };
 
     let icon = match badge_type {
@@ -68,6 +71,9 @@ pub fn Badge(
                 circle { cx: "6", cy: "6", r: "4" }
                 line { x1: "6", y1: "5", x2: "6", y2: "8" }
             }
+        },
+        BadgeType::Neutral => rsx! {
+            // No icon for neutral - just show the value
         },
     };
 

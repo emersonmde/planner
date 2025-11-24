@@ -109,6 +109,83 @@ impl PlanState {
             .sum()
     }
 
+    /// Calculate allocated weeks by role for a technical project
+    /// Returns (eng_allocated, sci_allocated, total_allocated)
+    pub fn calculate_technical_project_allocated_by_role(
+        &self,
+        technical_project_id: &Uuid,
+        get_member_role: impl Fn(&Uuid) -> Option<super::Role>,
+    ) -> (f32, f32, f32) {
+        use super::Role;
+        let mut eng_allocated = 0.0;
+        let mut sci_allocated = 0.0;
+
+        for allocation in &self.allocations {
+            if let Some(role) = get_member_role(&allocation.team_member_id) {
+                for assignment in &allocation.assignments {
+                    if &assignment.technical_project_id == technical_project_id {
+                        let weeks = assignment.percentage / 100.0;
+                        match role {
+                            Role::Engineering => eng_allocated += weeks,
+                            Role::Science => sci_allocated += weeks,
+                        }
+                    }
+                }
+            }
+        }
+
+        let total_allocated = eng_allocated + sci_allocated;
+        (eng_allocated, sci_allocated, total_allocated)
+    }
+
+    /// Get unique team member IDs assigned to a technical project
+    pub fn get_assigned_team_members(&self, technical_project_id: &Uuid) -> Vec<Uuid> {
+        let mut member_ids: Vec<Uuid> = self
+            .allocations
+            .iter()
+            .filter(|alloc| {
+                alloc
+                    .assignments
+                    .iter()
+                    .any(|a| &a.technical_project_id == technical_project_id)
+            })
+            .map(|alloc| alloc.team_member_id)
+            .collect();
+
+        // Remove duplicates
+        member_ids.sort();
+        member_ids.dedup();
+        member_ids
+    }
+
+    /// Get the date range for a technical project based on its allocations
+    /// Returns (first_allocation_week, last_allocation_week) or None if no allocations
+    pub fn get_project_allocation_date_range(
+        &self,
+        technical_project_id: &Uuid,
+    ) -> Option<(chrono::NaiveDate, chrono::NaiveDate)> {
+        let mut allocation_weeks: Vec<chrono::NaiveDate> = self
+            .allocations
+            .iter()
+            .filter(|alloc| {
+                alloc
+                    .assignments
+                    .iter()
+                    .any(|a| &a.technical_project_id == technical_project_id)
+            })
+            .map(|alloc| alloc.week_start_date)
+            .collect();
+
+        if allocation_weeks.is_empty() {
+            return None;
+        }
+
+        allocation_weeks.sort();
+        let first_week = allocation_weeks[0];
+        let last_week = allocation_weeks[allocation_weeks.len() - 1];
+        Some((first_week, last_week))
+    }
+
     /// Calculate total allocated weeks for a team member
     pub fn calculate_team_member_allocated_weeks(&self, team_member_id: &Uuid) -> f32 {
         self.allocations

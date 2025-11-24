@@ -154,8 +154,10 @@ pub struct TechnicalProject {
     pub name: String,
     /// Optional link to parent roadmap project
     pub roadmap_project_id: Option<Uuid>,
-    /// Estimated weeks for this technical work
-    pub estimated_weeks: f32,
+    /// Estimated engineering weeks
+    pub eng_estimate: f32,
+    /// Estimated science weeks
+    pub sci_estimate: f32,
     /// Project start date
     pub start_date: NaiveDate,
     /// Optional expected completion date
@@ -169,18 +171,25 @@ impl TechnicalProject {
     pub fn new(
         name: String,
         roadmap_project_id: Option<Uuid>,
-        estimated_weeks: f32,
+        eng_estimate: f32,
+        sci_estimate: f32,
         start_date: NaiveDate,
     ) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,
             roadmap_project_id,
-            estimated_weeks,
+            eng_estimate,
+            sci_estimate,
             start_date,
             expected_completion: None,
             notes: None,
         }
+    }
+
+    /// Get total estimated weeks (eng + sci)
+    pub fn total_estimate(&self) -> f32 {
+        self.eng_estimate + self.sci_estimate
     }
 
     /// Get the color for this technical project from PlanState
@@ -484,27 +493,32 @@ impl Plan {
 }
 
 /// Determine capacity badge status based on allocated vs estimated
+/// Neutral: 0/0 (no estimate, no allocation)
 /// Success: within 5% (±0.5 weeks per 10 weeks)
-/// Warning: 5-25% off
+/// Warning: 5-25% off, or allocated without estimate
 /// Error: >25% off
 pub fn get_capacity_status(allocated: f32, estimated: f32) -> crate::components::BadgeType {
     use crate::components::BadgeType;
 
+    // Handle zero estimate cases
     if estimated == 0.0 {
         return if allocated == 0.0 {
-            BadgeType::Success
+            // No estimate and no allocation - neutral state
+            BadgeType::Neutral
         } else {
+            // Allocated without an estimate - warning
             BadgeType::Warning
         };
     }
 
+    // Calculate how close allocation is to estimate
     let diff_pct = ((allocated - estimated) / estimated * 100.0).abs();
 
     if diff_pct <= 5.0 {
-        BadgeType::Success
+        BadgeType::Success // Within 5% of estimate
     } else if diff_pct <= 25.0 {
-        BadgeType::Warning
+        BadgeType::Warning // Within 25% of estimate
     } else {
-        BadgeType::Error
+        BadgeType::Error // More than 25% off from estimate
     }
 }
