@@ -4,12 +4,43 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 
 ## Progress Status
 
-**Current Status:** Milestone 8 Complete (8 of 16 milestones)
+**Current Status:** Milestone 10 Complete (10 of 17 milestones)
 
-- ✅ Milestones 1-8 Complete (see summary below)
-- 📋 **Milestones 9-16**: Planned for v1.0
+- ✅ Milestones 1-10 Complete (see summary below)
+- 📋 **Milestones 11-17**: Planned for v1.0
 
 **Build Status:** ✅ Compiles successfully
+
+---
+
+## Milestone Completion Checklist
+
+Before marking any milestone as complete, the following steps must be completed:
+
+1. **Pre-commit Hook**: Run `.githooks/pre-commit` and fix all errors and warnings
+   - cargo fmt --check
+   - cargo clippy (web and desktop targets)
+   - cargo test
+   - cargo doc
+   - cargo audit
+   - dx bundle --release
+
+2. **Code Review**: Review all changes as a Sr Rust Engineer for:
+   - Code structure and organization
+   - Naming conventions (descriptive, not generic like `prefs2`)
+   - Avoiding unnecessary complexity
+   - Proper error handling
+   - No code duplication
+   - Performance considerations
+   - Memory efficiency
+
+3. **Build Verification**: Ensure all targets compile successfully
+   - Web target (`cargo build --target wasm32-unknown-unknown --features web`)
+   - Desktop target (`cargo build --features desktop`)
+
+4. **Manual Testing**: Test all new functionality in the browser/desktop app
+
+5. **Documentation**: Ensure ROADMAP.md and CLAUDE.md are updated with completion status
 
 ---
 
@@ -34,7 +65,7 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 
 ---
 
-## Completed Milestones (1-8) - Summary
+## Completed Milestones (1-10) - Summary
 
 ### Milestone 1-4: Foundation & Core Views ✅
 **Key Deliverables:**
@@ -87,6 +118,24 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 - 500ms hover delay, glassmorphism effect
 - Auto-update project start/end dates based on allocations
 - Sprint boundary calculation helpers
+
+### Milestone 9: State Architecture Refactor ✅
+**Key Deliverables:**
+- Two-signal architecture: `use_preferences()` and `use_plan_state()`
+- localStorage persistence for team preferences
+- PlanExport model for self-contained export format
+- Global sprint anchor date (vs quarter-relative)
+- Updated all components to use two-signal pattern
+- ADR-004 documenting architecture decisions
+
+### Milestone 10: Roadmap Projects Management (CRUD Operations) ✅
+**Key Deliverables:**
+- ColorPicker component (9 color swatches, keyboard accessible)
+- RoadmapProjectModal for Add/Edit operations with inline validation
+- ConfirmationDialog for destructive actions
+- Full CRUD: Add, Edit, Delete roadmap projects
+- Cascade behavior: Deleting roadmap unlinks (not deletes) technical projects
+- Icon buttons (edit ⚙, delete 🗑) with visual feedback
 
 ---
 
@@ -435,7 +484,7 @@ plan_state.write().allocations.push(alloc);
 ## Milestone 10: Roadmap Projects Management (CRUD Operations)
 **Goal:** Enable full create, read, update, delete operations for roadmap projects
 
-**Status:** 📋 Not Started
+**Status:** ✅ Complete
 **Estimated Effort:** 2-3 days
 
 ### Context

@@ -1,17 +1,17 @@
 use dioxus::prelude::*;
 
 use crate::components::ui::{
-    Badge, Button, ButtonVariant, CellStyle, DataTable, Input, ProjectName, TableCell, TableHeader,
-    TableHeaderCell, TableRow,
+    Badge, Button, ButtonVariant, CellStyle, ConfirmationDialog, DataTable, Input, ModalMode,
+    ProjectName, RoadmapProjectModal, TableCell, TableHeader, TableHeaderCell, TableRow,
 };
-use crate::models::{get_capacity_status, Role};
+use crate::models::{get_capacity_status, ProjectColor, Role};
 use crate::state::{use_plan_state, use_preferences};
 
 /// Roadmap view - displays roadmap projects table and quarter summary
 /// Reference: docs/ui-design.md section 7.1
 #[component]
 pub fn RoadmapView() -> Element {
-    let plan_state = use_plan_state();
+    let mut plan_state = use_plan_state();
     let preferences = use_preferences();
 
     let plan_data = plan_state();
@@ -19,6 +19,24 @@ pub fn RoadmapView() -> Element {
 
     // Search filter state
     let search_query = use_signal(String::new);
+
+    // Modal state
+    let mut modal_visible = use_signal(|| false);
+    let mut modal_mode = use_signal(|| ModalMode::Add);
+    let mut modal_initial_name = use_signal(String::new);
+    let mut modal_initial_eng_estimate = use_signal(|| 0.0);
+    let mut modal_initial_sci_estimate = use_signal(|| 0.0);
+    let mut modal_initial_start_date = use_signal(|| plan_data.quarter_start_date);
+    let mut modal_initial_launch_date = use_signal(|| {
+        plan_data.quarter_start_date + chrono::Duration::weeks(plan_data.num_weeks as i64)
+    });
+    let mut modal_initial_color = use_signal(|| ProjectColor::Blue);
+    let mut modal_initial_notes = use_signal(String::new);
+
+    // Delete confirmation dialog state
+    let mut delete_dialog_visible = use_signal(|| false);
+    let mut delete_project_id = use_signal(|| None::<uuid::Uuid>);
+    let mut delete_project_name = use_signal(String::new);
 
     // Filter projects based on search query
     let filtered_projects: Vec<_> = plan_data
@@ -91,9 +109,18 @@ pub fn RoadmapView() -> Element {
                 Button {
                     variant: ButtonVariant::Primary,
                     onclick: move |_| {
-                        // Placeholder for add project functionality
+                        // Reset modal to Add mode with default values
+                        modal_mode.set(ModalMode::Add);
+                        modal_initial_name.set(String::new());
+                        modal_initial_eng_estimate.set(0.0);
+                        modal_initial_sci_estimate.set(0.0);
+                        modal_initial_start_date.set(plan_data.quarter_start_date);
+                        modal_initial_launch_date.set(plan_data.quarter_start_date + chrono::Duration::weeks(plan_data.num_weeks as i64));
+                        modal_initial_color.set(ProjectColor::Blue);
+                        modal_initial_notes.set(String::new());
+                        modal_visible.set(true);
                     },
-                    "Add Roadmap Project"
+                    "+ New Roadmap Project"
                 }
             }
 
@@ -129,12 +156,71 @@ pub fn RoadmapView() -> Element {
 
                         rsx! {
                             TableRow {
-                                // Project name with color dot
+                                // Project name with color dot and hover actions
                                 TableCell {
                                     style: CellStyle::Emphasis,
-                                    ProjectName {
-                                        name: project.name.clone(),
-                                        color: project.color.to_hex(),
+                                    div {
+                                        class: "project-name-cell",
+                                        ProjectName {
+                                            name: project.name.clone(),
+                                            color: project.color.to_hex(),
+                                        }
+                                        // Hover actions
+                                        {
+                                            let project_id = project.id;
+                                            let project_name = project.name.clone();
+                                            let project_eng_estimate = project.eng_estimate;
+                                            let project_sci_estimate = project.sci_estimate;
+                                            let project_start_date = project.start_date;
+                                            let project_launch_date = project.launch_date;
+                                            let project_color = project.color;
+                                            let project_notes = project.notes.clone().unwrap_or_default();
+
+                                            rsx! {
+                                                div {
+                                                    class: "row-actions",
+                                                    // Edit button
+                                                    {
+                                                        let edit_name = project_name.clone();
+                                                        let edit_notes = project_notes.clone();
+                                                        rsx! {
+                                                            button {
+                                                                class: "icon-button",
+                                                                title: "Edit project",
+                                                                onclick: move |_| {
+                                                                    modal_mode.set(ModalMode::Edit(project_id));
+                                                                    modal_initial_name.set(edit_name.clone());
+                                                                    modal_initial_eng_estimate.set(project_eng_estimate);
+                                                                    modal_initial_sci_estimate.set(project_sci_estimate);
+                                                                    modal_initial_start_date.set(project_start_date);
+                                                                    modal_initial_launch_date.set(project_launch_date);
+                                                                    modal_initial_color.set(project_color);
+                                                                    modal_initial_notes.set(edit_notes.clone());
+                                                                    modal_visible.set(true);
+                                                                },
+                                                                "⚙"
+                                                            }
+                                                        }
+                                                    }
+                                                    // Delete button
+                                                    {
+                                                        let delete_name = project_name.clone();
+                                                        rsx! {
+                                                            button {
+                                                                class: "icon-button danger",
+                                                                title: "Delete project",
+                                                                onclick: move |_| {
+                                                                    delete_project_id.set(Some(project_id));
+                                                                    delete_project_name.set(delete_name.clone());
+                                                                    delete_dialog_visible.set(true);
+                                                                },
+                                                                "🗑"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
@@ -257,6 +343,93 @@ pub fn RoadmapView() -> Element {
                                 "Below target"
                             }
                         }
+                    }
+                }
+            }
+
+            // Roadmap Project Modal
+            RoadmapProjectModal {
+                visible: modal_visible(),
+                mode: modal_mode(),
+                initial_name: modal_initial_name(),
+                initial_eng_estimate: modal_initial_eng_estimate(),
+                initial_sci_estimate: modal_initial_sci_estimate(),
+                initial_start_date: modal_initial_start_date(),
+                initial_launch_date: modal_initial_launch_date(),
+                initial_color: modal_initial_color(),
+                initial_notes: modal_initial_notes(),
+                on_save: move |project| {
+                    // Add or update project in plan_state
+                    match modal_mode() {
+                        ModalMode::Add => {
+                            plan_state.write().roadmap_projects.push(project);
+                        }
+                        ModalMode::Edit(id) => {
+                            if let Some(existing) = plan_state
+                                .write()
+                                .roadmap_projects
+                                .iter_mut()
+                                .find(|p| p.id == id)
+                            {
+                                *existing = project;
+                            }
+                        }
+                    }
+                    modal_visible.set(false);
+                },
+                on_cancel: move |_| {
+                    modal_visible.set(false);
+                },
+            }
+
+            // Delete Confirmation Dialog
+            {
+                let project_id = delete_project_id();
+                let linked_tech_projects_count = if let Some(id) = project_id {
+                    plan_data
+                        .technical_projects
+                        .iter()
+                        .filter(|tp| tp.roadmap_project_id == Some(id))
+                        .count()
+                } else {
+                    0
+                };
+
+                let warning_message = if linked_tech_projects_count > 0 {
+                    format!(
+                        "This will unlink {} technical project{}. The technical projects will not be deleted.",
+                        linked_tech_projects_count,
+                        if linked_tech_projects_count == 1 { "" } else { "s" }
+                    )
+                } else {
+                    String::new()
+                };
+
+                rsx! {
+                    ConfirmationDialog {
+                        visible: delete_dialog_visible(),
+                        title: "Delete Roadmap Project".to_string(),
+                        message: format!("Are you sure you want to delete \"{}\"?", delete_project_name()),
+                        warning: warning_message,
+                        confirm_label: "Delete".to_string(),
+                        cancel_label: "Cancel".to_string(),
+                        on_confirm: move |_| {
+                            if let Some(id) = delete_project_id() {
+                                // Remove the roadmap project
+                                plan_state.write().roadmap_projects.retain(|p| p.id != id);
+
+                                // Unlink all technical projects
+                                for tech_project in plan_state.write().technical_projects.iter_mut() {
+                                    if tech_project.roadmap_project_id == Some(id) {
+                                        tech_project.roadmap_project_id = None;
+                                    }
+                                }
+                            }
+                            delete_dialog_visible.set(false);
+                        },
+                        on_cancel: move |_| {
+                            delete_dialog_visible.set(false);
+                        },
                     }
                 }
             }

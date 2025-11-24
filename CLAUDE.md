@@ -109,11 +109,10 @@ The application uses a comprehensive design token system defined in `assets/styl
 
 ### State Management
 
-**Current (M1-8)**: Single-signal architecture with `use_plan_state()` hook
-**Planned (M9)**: Two-signal architecture for improved reactivity and persistence
+**Current (M9+)**: Two-signal architecture for improved reactivity and persistence
 - `use_preferences()`: Team roster, sprint config (persisted to localStorage)
 - `use_plan_state()`: Projects, allocations (exported/imported per quarter)
-- `PlanExport`: Self-contained format for sharing and future multi-team aggregation
+- `PlanExport`: Self-contained format for sharing and future multi-team aggregation (M13)
 
 State updates trigger reactive UI updates via Dioxus signals.
 
@@ -153,10 +152,10 @@ ADRs document major design decisions and their rationale. Located in `docs/adrs/
 - **`ADR-001-design-system-structure.md`**: Why CSS design tokens, module organization, dark-mode-first approach
 - **`ADR-002-state-management.md`**: Why Dioxus Signals over Redux/multiple signals, alternatives considered
 - **`ADR-003-grid-layout.md`**: Why horizontal timeline, CSS Grid choice, sticky header strategy, performance considerations
+- **`ADR-004-state-persistence.md`**: Two-signal architecture, localStorage persistence strategy, self-contained export format
 
 ### Future Documentation
 These will be created in upcoming milestones:
-- **M9**: `docs/adrs/ADR-004-state-persistence.md` - State architecture, persistence strategy, and self-contained export format
 - **M13**: `docs/file-format.md` - PlanExport JSON schema and import/export specifications
 - **M14**: `docs/validation.md` - Validation rules, error messages, and user feedback patterns
 - **M16**: `docs/testing.md` - Testing strategy, coverage goals, and accessibility testing
@@ -164,14 +163,17 @@ These will be created in upcoming milestones:
 
 ## Milestone-Based Development
 
-The project follows a structured milestone approach toward v1.0 release. **Never skip ahead to future milestones.** Each milestone must:
-1. Build successfully (`dx build`)
-2. Meet all acceptance criteria
-3. Be manually tested
-4. Have documentation updated
+The project follows a structured milestone approach toward v1.0 release. **Never skip ahead to future milestones.**
 
-**Current Status:** Milestone 9 Complete (State Architecture Refactor)
-**Next Milestone:** Milestone 10 - Roadmap Projects Management (CRUD Operations)
+**Before marking any milestone complete**, follow the **Milestone Completion Checklist** in `docs/roadmap.md`:
+1. Run `.githooks/pre-commit` and fix all errors/warnings
+2. Review all changes as a Sr Rust Engineer (code structure, naming, complexity, performance)
+3. Build verification (web + desktop targets)
+4. Manual testing
+5. Documentation updates
+
+**Current Status:** Milestone 10 Complete (Roadmap Projects CRUD)
+**Next Milestone:** Milestone 11 - Technical Projects Management (CRUD Operations)
 
 **v1.0 Goals** (M9-M17):
 - Two-signal state architecture (preferences + plan_state)
