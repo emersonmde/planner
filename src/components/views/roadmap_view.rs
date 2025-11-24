@@ -347,39 +347,40 @@ pub fn RoadmapView() -> Element {
                 }
             }
 
-            // Roadmap Project Modal
-            RoadmapProjectModal {
-                visible: modal_visible(),
-                mode: modal_mode(),
-                initial_name: modal_initial_name(),
-                initial_eng_estimate: modal_initial_eng_estimate(),
-                initial_sci_estimate: modal_initial_sci_estimate(),
-                initial_start_date: modal_initial_start_date(),
-                initial_launch_date: modal_initial_launch_date(),
-                initial_color: modal_initial_color(),
-                initial_notes: modal_initial_notes(),
-                on_save: move |project| {
-                    // Add or update project in plan_state
-                    match modal_mode() {
-                        ModalMode::Add => {
-                            plan_state.write().roadmap_projects.push(project);
-                        }
-                        ModalMode::Edit(id) => {
-                            if let Some(existing) = plan_state
-                                .write()
-                                .roadmap_projects
-                                .iter_mut()
-                                .find(|p| p.id == id)
-                            {
-                                *existing = project;
+            // Roadmap Project Modal (conditionally rendered)
+            if modal_visible() {
+                RoadmapProjectModal {
+                    mode: modal_mode(),
+                    initial_name: modal_initial_name(),
+                    initial_eng_estimate: modal_initial_eng_estimate(),
+                    initial_sci_estimate: modal_initial_sci_estimate(),
+                    initial_start_date: modal_initial_start_date(),
+                    initial_launch_date: modal_initial_launch_date(),
+                    initial_color: modal_initial_color(),
+                    initial_notes: modal_initial_notes(),
+                    on_save: move |project| {
+                        // Add or update project in plan_state
+                        match modal_mode() {
+                            ModalMode::Add => {
+                                plan_state.write().roadmap_projects.push(project);
+                            }
+                            ModalMode::Edit(id) => {
+                                if let Some(existing) = plan_state
+                                    .write()
+                                    .roadmap_projects
+                                    .iter_mut()
+                                    .find(|p| p.id == id)
+                                {
+                                    *existing = project;
+                                }
                             }
                         }
-                    }
-                    modal_visible.set(false);
-                },
-                on_cancel: move |_| {
-                    modal_visible.set(false);
-                },
+                        modal_visible.set(false);
+                    },
+                    on_cancel: move |_| {
+                        modal_visible.set(false);
+                    },
+                }
             }
 
             // Delete Confirmation Dialog

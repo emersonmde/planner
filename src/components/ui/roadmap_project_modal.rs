@@ -15,8 +15,6 @@ pub enum ModalMode {
 /// Props for RoadmapProjectModal
 #[derive(Props, Clone, PartialEq)]
 pub struct RoadmapProjectModalProps {
-    /// Whether the modal is visible
-    pub visible: bool,
     /// Mode (Add or Edit with project ID)
     pub mode: ModalMode,
     /// Initial values for the form
@@ -35,12 +33,8 @@ pub struct RoadmapProjectModalProps {
 /// Roadmap project modal for adding/editing roadmap projects
 #[component]
 pub fn RoadmapProjectModal(props: RoadmapProjectModalProps) -> Element {
-    if !props.visible {
-        return rsx! {};
-    }
-
     // Form state - simple signals initialized from props
-    let mut name = use_signal(|| props.initial_name.clone());
+    let name = use_signal(|| props.initial_name.clone());
     let mut eng_estimate = use_signal(|| props.initial_eng_estimate);
     let mut sci_estimate = use_signal(|| props.initial_sci_estimate);
     let mut start_date = use_signal(|| props.initial_start_date);
@@ -131,19 +125,7 @@ pub fn RoadmapProjectModal(props: RoadmapProjectModalProps) -> Element {
         };
 
         props.on_save.call(project);
-
-        // Reset form to initial values after successful save
-        name.set(props.initial_name.clone());
-        eng_estimate.set(props.initial_eng_estimate);
-        sci_estimate.set(props.initial_sci_estimate);
-        start_date.set(props.initial_start_date);
-        launch_date.set(props.initial_launch_date);
-        color.set(props.initial_color);
-        notes.set(props.initial_notes.clone());
-        name_error.set(String::new());
-        eng_estimate_error.set(String::new());
-        sci_estimate_error.set(String::new());
-        date_error.set(String::new());
+        // No need to reset form - component will unmount when parent closes modal
     };
 
     let modal_title = match props.mode {
