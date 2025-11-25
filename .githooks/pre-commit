@@ -16,8 +16,8 @@ cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
 echo "→ Running cargo clippy (desktop target)"
 cargo clippy --features desktop --all-targets -- -D warnings
 
-echo "→ Running cargo test --verbose --features desktop"
-cargo test --verbose --features desktop
+echo "→ Running cargo test --verbose"
+cargo test --verbose
 
 echo "→ Running cargo doc --no-deps"
 cargo doc --no-deps

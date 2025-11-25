@@ -85,6 +85,7 @@ impl PlanExport {
     /// - Replace local preferences entirely
     pub fn into_signals(self) -> (Preferences, PlanState) {
         let prefs = Preferences {
+            schema_version: super::PREFERENCES_SCHEMA_VERSION.to_string(),
             team_name: self.team_name,
             team_members: self.team_members,
             // Use defaults for sprint config (user should configure these locally)
@@ -197,6 +198,7 @@ mod tests {
 
     fn create_sample_export() -> PlanExport {
         let prefs = Preferences {
+            schema_version: crate::models::PREFERENCES_SCHEMA_VERSION.to_string(),
             team_name: "Backend Team".to_string(),
             team_members: vec![TeamMember::new(
                 "Alice Kim".to_string(),

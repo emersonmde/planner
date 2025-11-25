@@ -4,10 +4,23 @@ use serde::{Deserialize, Serialize};
 use super::TeamMember;
 use crate::utils::get_next_quarter_info;
 
+/// Current schema version for Preferences
+pub const PREFERENCES_SCHEMA_VERSION: &str = "1.0";
+
+/// Default schema version for deserialization (handles pre-versioned data)
+fn default_schema_version() -> String {
+    PREFERENCES_SCHEMA_VERSION.to_string()
+}
+
 /// Team preferences - persisted to localStorage
 /// These settings are long-term and shared across all quarters
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Preferences {
+    /// Schema version for migration support
+    /// Defaults to "1.0" when loading data without this field (pre-1.0 or 1.0 data)
+    #[serde(default = "default_schema_version")]
+    pub schema_version: String,
+
     /// Team name (e.g., "Backend Team", "Data Science")
     /// Used for identifying exports in multi-team aggregation (v2.0)
     pub team_name: String,
@@ -37,6 +50,7 @@ impl Preferences {
         let (_, _, quarter_start, _) = get_next_quarter_info(today);
 
         Self {
+            schema_version: PREFERENCES_SCHEMA_VERSION.to_string(),
             team_name,
             team_members: Vec::new(),
             sprint_anchor_date: quarter_start,
@@ -89,6 +103,7 @@ mod tests {
     #[test]
     fn test_preferences_creation() {
         let prefs = Preferences::new("Backend Team".to_string());
+        assert_eq!(prefs.schema_version, "1.0");
         assert_eq!(prefs.team_name, "Backend Team");
         assert_eq!(prefs.team_members.len(), 0);
         assert_eq!(prefs.sprint_length_weeks, 2);
@@ -98,8 +113,41 @@ mod tests {
     #[test]
     fn test_preferences_default() {
         let prefs = Preferences::default();
+        assert_eq!(prefs.schema_version, "1.0");
         assert_eq!(prefs.team_name, "My Team");
         assert!(prefs.validate().is_ok());
+    }
+
+    #[test]
+    fn test_schema_version_default_on_legacy_data() {
+        // Simulate loading data saved before schema_version was added
+        let legacy_json = r#"{
+            "team_name": "Legacy Team",
+            "team_members": [],
+            "sprint_anchor_date": "2024-01-01",
+            "sprint_length_weeks": 2,
+            "default_capacity": 12.0
+        }"#;
+
+        let prefs: Preferences = serde_json::from_str(legacy_json).unwrap();
+        assert_eq!(prefs.schema_version, "1.0"); // Should default to 1.0
+        assert_eq!(prefs.team_name, "Legacy Team");
+    }
+
+    #[test]
+    fn test_schema_version_preserved_on_load() {
+        // Ensure explicit schema_version is preserved (for future versions)
+        let json_with_version = r#"{
+            "schema_version": "2.0",
+            "team_name": "Future Team",
+            "team_members": [],
+            "sprint_anchor_date": "2024-01-01",
+            "sprint_length_weeks": 2,
+            "default_capacity": 12.0
+        }"#;
+
+        let prefs: Preferences = serde_json::from_str(json_with_version).unwrap();
+        assert_eq!(prefs.schema_version, "2.0"); // Should preserve the version
     }
 
     #[test]
