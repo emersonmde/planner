@@ -2,7 +2,7 @@
 use chrono::NaiveDate;
 
 use crate::components::ui::GridCellVariant;
-use crate::models::{Allocation, PlanState, ProjectColor};
+use planner_core::models::{Allocation, PlanState, ProjectColor};
 
 /// Calculate the appropriate GridCellVariant for a given allocation
 pub fn calculate_cell_variant(
@@ -59,7 +59,7 @@ fn create_split_variant(alloc: &Allocation, plan_state: &PlanState) -> GridCellV
 
 /// Create a single week allocation cell variant
 fn create_single_week_variant(
-    assignment: &crate::models::Assignment,
+    assignment: &planner_core::models::Assignment,
     plan_state: &PlanState,
     week_start_date: NaiveDate,
 ) -> GridCellVariant {

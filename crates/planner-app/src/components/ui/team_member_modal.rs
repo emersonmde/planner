@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 use crate::components::ui::{Button, ButtonVariant, Input};
-use crate::models::{Role, TeamMember};
+use planner_core::models::{Role, TeamMember};
 
 /// Mode for the team member modal (Add or Edit)
 #[derive(Clone, Copy, PartialEq)]

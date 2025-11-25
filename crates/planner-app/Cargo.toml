@@ -1,0 +1,52 @@
+[package]
+name = "planner-app"
+version = "0.1.0"
+authors = ["Matthew Emerson <emersonmde@protonmail.com>"]
+edition = "2021"
+description = "Quarterly Planner - Dioxus application"
+
+[dependencies]
+planner-core = { path = "../planner-core" }
+dioxus = { version = "0.7.1", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# WASM-only dependencies
+[target.'cfg(target_family = "wasm")'.dependencies]
+uuid = { version = "1.0", features = ["js"] }  # JS feature for wasm UUID generation
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Storage",
+    "Document",
+    "Element",
+    "HtmlInputElement",
+    "FileList",
+    "File",
+    "FileReader",
+    "console",
+    "Navigator",
+    "Clipboard",
+    "Location",
+    "History",
+    "Url",
+    "UrlSearchParams",
+    "KeyboardEvent"
+] }
+js-sys = "0.3"
+wasm-bindgen-futures = "0.4"
+
+# Desktop-only dependencies
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dirs = "6.0"
+rfd = "0.15"
+arboard = "3.4"
+base64 = "0.22"
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]

@@ -5,9 +5,9 @@ use crate::components::ui::{
     AssignProjectModal, ConfirmationDialog, ContextMenu, FloatingFab, FloatingProjectPanel,
     GridCell, KeybindingsOverlay, SplitAllocationModal, TeamMemberModal, TeamMemberModalMode,
 };
-use crate::models::{Allocation, Assignment, TeamMember};
 use crate::state::{use_plan_state, use_preferences};
-use crate::utils::generate_quarter_weeks;
+use planner_core::models::{Allocation, Assignment, TeamMember};
+use planner_core::utils::generate_quarter_weeks;
 
 use super::grid_helpers::{calculate_cell_class, calculate_cell_variant};
 use super::paintbrush::{allocate_project_to_cell, SelectedProject};
@@ -237,7 +237,7 @@ pub fn AllocationView() -> Element {
                     let plan_data = plan_state();
                     let allocation_map: std::collections::HashMap<
                         (uuid::Uuid, chrono::NaiveDate),
-                        &crate::models::Allocation,
+                        &planner_core::models::Allocation,
                     > = plan_data
                         .allocations
                         .iter()
@@ -262,7 +262,7 @@ pub fn AllocationView() -> Element {
                     let plan_data = plan_state();
                     let allocation_map: std::collections::HashMap<
                         (uuid::Uuid, chrono::NaiveDate),
-                        &crate::models::Allocation,
+                        &planner_core::models::Allocation,
                     > = plan_data
                         .allocations
                         .iter()
@@ -340,8 +340,9 @@ pub fn AllocationView() -> Element {
                     });
 
                     // Create new allocation with single project
-                    let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
-                    alloc.assignments = vec![crate::models::Assignment::new(proj_id, 100.0)];
+                    let mut alloc =
+                        planner_core::models::Allocation::new(team_member_id, week_start);
+                    alloc.assignments = vec![planner_core::models::Assignment::new(proj_id, 100.0)];
                     p.allocations.push(alloc);
 
                     // Update dates for newly assigned project
@@ -395,10 +396,14 @@ pub fn AllocationView() -> Element {
                         });
 
                         // Create split allocation
-                        let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
+                        let mut alloc =
+                            planner_core::models::Allocation::new(team_member_id, week_start);
                         alloc.assignments = vec![
-                            crate::models::Assignment::new(proj1_id, split_percentage()),
-                            crate::models::Assignment::new(proj2_id, 100.0 - split_percentage()),
+                            planner_core::models::Assignment::new(proj1_id, split_percentage()),
+                            planner_core::models::Assignment::new(
+                                proj2_id,
+                                100.0 - split_percentage(),
+                            ),
                         ];
                         p.allocations.push(alloc);
 
@@ -478,8 +483,10 @@ pub fn AllocationView() -> Element {
                     });
 
                     // Create new allocation
-                    let mut alloc = crate::models::Allocation::new(team_member_id, week_start);
-                    alloc.assignments = vec![crate::models::Assignment::new(project_id, 100.0)];
+                    let mut alloc =
+                        planner_core::models::Allocation::new(team_member_id, week_start);
+                    alloc.assignments =
+                        vec![planner_core::models::Assignment::new(project_id, 100.0)];
                     p.allocations.push(alloc);
 
                     // Update dates for newly assigned project
@@ -593,12 +600,14 @@ pub fn AllocationView() -> Element {
         };
 
     // Pre-compute allocation map for O(1) lookups
-    let allocation_map: HashMap<(uuid::Uuid, chrono::NaiveDate), &crate::models::Allocation> =
-        plan_data
-            .allocations
-            .iter()
-            .map(|a| ((a.team_member_id, a.week_start_date), a))
-            .collect();
+    let allocation_map: HashMap<
+        (uuid::Uuid, chrono::NaiveDate),
+        &planner_core::models::Allocation,
+    > = plan_data
+        .allocations
+        .iter()
+        .map(|a| ((a.team_member_id, a.week_start_date), a))
+        .collect();
 
     // Get selected project color for FAB
     let fab_project_color = match selected_project() {
@@ -966,7 +975,7 @@ pub fn AllocationView() -> Element {
                 TeamMemberModal {
                     mode: TeamMemberModalMode::Add,
                     initial_name: String::new(),
-                    initial_role: crate::models::Role::Engineering,
+                    initial_role: planner_core::models::Role::Engineering,
                     initial_capacity: 0.0,
                     default_capacity: prefs_data.default_capacity,
                     allocated_weeks: 0.0,

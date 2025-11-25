@@ -2,7 +2,7 @@
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-use crate::models::ProjectColor;
+use planner_core::models::ProjectColor;
 
 /// Assign project modal component
 #[component]

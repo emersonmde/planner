@@ -10,14 +10,20 @@ cd "$REPO_ROOT"
 echo "→ Running cargo fmt -- --check"
 cargo fmt -- --check
 
-echo "→ Running cargo clippy (web target)"
-cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
+echo "→ Running cargo clippy -p planner-core"
+cargo clippy -p planner-core -- -D warnings
 
-echo "→ Running cargo clippy (desktop target)"
-cargo clippy --features desktop --all-targets -- -D warnings
+echo "→ Running cargo clippy -p planner-app (web target)"
+cargo clippy -p planner-app --target wasm32-unknown-unknown --features web -- -D warnings
 
-echo "→ Running cargo test --verbose"
-cargo test --verbose
+echo "→ Running cargo clippy -p planner-app (desktop target)"
+cargo clippy -p planner-app --features desktop --all-targets -- -D warnings
+
+echo "→ Running cargo test -p planner-core --verbose"
+cargo test -p planner-core --verbose
+
+echo "→ Running cargo test -p planner-app --features desktop --verbose"
+cargo test -p planner-app --features desktop --verbose
 
 echo "→ Running cargo doc --no-deps"
 cargo doc --no-deps
@@ -43,7 +49,7 @@ EOF
   exit 1
 fi
 
-echo "→ Running dx bundle --release (WASM build)"
-dx bundle --release
+echo "→ Running dx bundle -p planner-app --release (WASM build)"
+dx bundle -p planner-app --release
 
 echo "✓ All pre-commit checks passed"

@@ -6,23 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and localStorage persistence.
 
-**Status:** Milestone 13 Complete - Preparing for 1.0. The app features a "Plan Menu" (Notion/Linear-style) for file operations: Open, Save, Copy/Paste to clipboard, with keyboard shortcuts (⌘O, ⌘S). Viewing mode displays imported plans with unsaved changes detection. Two-signal architecture (Preferences + PlanState) with localStorage persistence. Full CRUD operations for all entities. See `docs/roadmap.md` for the v1.0 roadmap (3 remaining milestones: M14-16).
+**Status:** Milestone 14 Complete - Workspace restructured. The app is now a Cargo workspace with `planner-core` (platform-independent models/utils) and `planner-app` (Dioxus UI). See `docs/roadmap.md` for the v1.0 roadmap (2 remaining milestones: M15-16).
 
 ## Development Commands
 
 ### Building & Running
 ```bash
 # Run web version with hot reload
-dx serve
+dx serve -p planner-app
 
 # Run desktop version
-dx serve --platform desktop
+dx serve -p planner-app --platform desktop
 
 # Build for production (web)
-dx build --release
+dx build -p planner-app --release
 
 # Build for specific platform
-dx build --platform desktop --release
+dx build -p planner-app --platform desktop --release
 ```
 
 ### Testing & Linting
@@ -33,14 +33,20 @@ cargo fmt
 # Check formatting
 cargo fmt -- --check
 
-# Run clippy (web target)
-cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
+# Run clippy (core - platform-independent)
+cargo clippy -p planner-core -- -D warnings
 
-# Run clippy (desktop target)
-cargo clippy --features desktop --all-targets -- -D warnings
+# Run clippy (app - web target)
+cargo clippy -p planner-app --target wasm32-unknown-unknown --features web -- -D warnings
 
-# Run tests
-cargo test --verbose --features desktop
+# Run clippy (app - desktop target)
+cargo clippy -p planner-app --features desktop --all-targets -- -D warnings
+
+# Run tests (core - runs on any platform including Linux CI)
+cargo test -p planner-core --verbose
+
+# Run tests (app - needs macOS for desktop deps)
+cargo test -p planner-app --features desktop --verbose
 
 # Check for security vulnerabilities
 cargo audit
@@ -56,11 +62,13 @@ The repository includes a pre-commit hook that runs all quality checks before al
 ```bash
 # The hook runs automatically before each commit:
 # - cargo fmt --check
-# - cargo clippy (web and desktop)
-# - cargo test
+# - cargo clippy -p planner-core
+# - cargo clippy -p planner-app (web and desktop)
+# - cargo test -p planner-core
+# - cargo test -p planner-app --features desktop
 # - cargo doc
 # - cargo audit
-# - dx bundle --release
+# - dx bundle -p planner-app --release
 ```
 
 **Required tools:**
@@ -70,43 +78,56 @@ The repository includes a pre-commit hook that runs all quality checks before al
 ### Continuous Integration
 
 The project uses GitHub Actions for CI/CD (`.github/workflows/ci.yml`):
-- **Format/Lint**: Runs on Linux (cheapest) - fmt check, clippy for web target
-- **Tests**: Run on macOS (avoids Linux desktop dependency issues)
+- **Format/Lint**: Runs on Linux - fmt check, clippy for core and app (web target)
+- **Test Core**: Runs on Linux (planner-core has no platform deps)
+- **Test App**: Runs on macOS (planner-app needs desktop deps)
 - **Security Audit**: cargo audit on Linux
 - **Web Build**: Linux, deploys to GitHub Pages on main branch
 - **Desktop Builds**: macOS (required), Windows (optional, continue-on-error)
 - **Deploy**: Only after web build + macOS build + audit pass
 
 **Platform Notes:**
-- Tests must run on macOS due to dioxus-desktop Linux dependency conflicts
-- Linux desktop removed from CI (ashpd async-std/tokio conflict)
+- Core tests run on Linux (cheap, fast) - no Dioxus dependencies
+- App tests run on macOS due to dioxus-desktop dependencies
 - Windows build is optional and doesn't block deployment
 
 ### Project-Specific Notes
-- The project uses Cargo features for platform targeting: `web` (default), `desktop`, `mobile`
+- **Workspace Structure**: planner-core (models, utils) + planner-app (Dioxus UI)
+- The app crate uses Cargo features for platform targeting: `web` (default), `desktop`, `mobile`
 - CSS files must be loaded via `asset!()` macro, NOT via `@import` in CSS
-- Both `theme.css` and `main.css` must be explicitly linked in `main.rs`
+- Assets are in `crates/planner-app/assets/`
 
 ## Architecture
 
-### Component Organization
+### Workspace Organization
 
 ```
-src/
-├── components/
-│   ├── layout/      # TopNav (with sub-components: PlanMenu, ViewTabs, CapacityIndicator)
-│   ├── ui/          # Reusable UI primitives (Button, Badge, Input, Modals)
-│   └── views/       # Main view components (RoadmapView, TechnicalView, AllocationView)
-├── models/          # Data structures (Plan, TeamMember, Projects, Allocations, PlanExport)
-├── plan_io.rs       # Platform-specific file I/O (download, clipboard, file reading)
-├── state.rs         # App state management (signals, context, ViewingSession)
-├── storage.rs       # localStorage persistence (preferences, plan state)
-└── utils/           # Helper functions (date calculations, capacity tracking)
+planner/
+├── Cargo.toml              # Workspace root
+├── Dioxus.toml             # Web/desktop app config
+├── crates/
+│   ├── planner-core/       # Platform-independent (testable on Linux)
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── models/     # Data structures (Plan, TeamMember, Projects, etc.)
+│   │       └── utils/      # Date helpers, capacity calculations
+│   └── planner-app/        # Dioxus UI (platform-specific)
+│       ├── assets/         # CSS, favicon
+│       └── src/
+│           ├── main.rs
+│           ├── components/
+│           │   ├── layout/     # TopNav, PlanMenu, ViewTabs, CapacityIndicator
+│           │   ├── ui/         # Button, Badge, Input, Modals
+│           │   └── views/      # RoadmapView, TechnicalView, AllocationView
+│           ├── plan_io.rs      # Platform-specific file I/O
+│           ├── state.rs        # App state (signals, context)
+│           └── storage/        # localStorage persistence
+└── docs/
 ```
 
 ### Design System
 
-The application uses a comprehensive design token system defined in `assets/styling/theme.css`:
+The application uses a comprehensive design token system defined in `crates/planner-app/assets/styling/theme.css`:
 
 - **Color System**: Based on Apple's dark mode guidelines
   - Backgrounds: Primary (#1c1c1e), Secondary (#2c2c2e), Tertiary (#3a3a3c)
@@ -180,22 +201,21 @@ The project follows a structured milestone approach toward v1.0 release. **Never
 4. Manual testing
 5. Documentation updates
 
-**Current Status:** Milestone 13 Complete - Preparing for 1.0
-**Next Milestone:** Milestone 14 - Workspace Restructure & CI
+**Current Status:** Milestone 14 Complete - Workspace Restructure Done
+**Next Milestone:** Milestone 15 - Core Tests
 
-**v1.0 Goals** (M14-M16):
-- M14: Cargo workspace for proper CI testing and platform separation
+**v1.0 Goals** (M15-M16):
 - M15: Core unit tests for models and utilities
 - M16: Release preparation (version, README, empty states, release artifacts)
 
 **1.0 Success Criteria:**
-- Visual allocation grid with paintbrush mode and keyboard shortcuts
-- Full CRUD operations for roadmap projects, technical projects, and team members
-- Two-signal state architecture with localStorage persistence
-- Self-contained plan export/import for sharing and versioning
-- Workspace restructure for proper CI/testing
-- Core unit tests (models, utils)
-- macOS desktop release
+- ✅ Visual allocation grid with paintbrush mode and keyboard shortcuts
+- ✅ Full CRUD operations for roadmap projects, technical projects, and team members
+- ✅ Two-signal state architecture with localStorage persistence
+- ✅ Self-contained plan export/import for sharing and versioning
+- ✅ Workspace restructure for proper CI/testing
+- 🎯 Core unit tests (models, utils)
+- 🎯 macOS desktop release
 
 **Post-1.0 Vision:**
 - Multi-team aggregation (Sr Manager view across multiple teams)

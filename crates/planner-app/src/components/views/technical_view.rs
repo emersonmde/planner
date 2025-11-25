@@ -6,8 +6,8 @@ use crate::components::ui::{
     Badge, Button, ButtonVariant, CellStyle, ConfirmationDialog, DataTable, Input, ProjectName,
     TableCell, TableHeader, TableHeaderCell, TableRow, TechnicalModalMode, TechnicalProjectModal,
 };
-use crate::models::{get_capacity_status, ProjectColor};
 use crate::state::{use_plan_state, use_preferences};
+use planner_core::models::{get_capacity_status, ProjectColor};
 
 /// Filter options for technical projects
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

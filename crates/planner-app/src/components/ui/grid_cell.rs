@@ -1,5 +1,5 @@
-use crate::models::ProjectColor;
 use dioxus::prelude::*;
+use planner_core::models::ProjectColor;
 
 /// Position of a cell in a multi-week series
 #[allow(dead_code)] // Reserved for future multi-week series detection

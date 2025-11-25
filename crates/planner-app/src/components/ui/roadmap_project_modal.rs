@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 use crate::components::ui::{Button, ButtonVariant, ColorPicker, Input};
-use crate::models::{ProjectColor, RoadmapProject};
+use planner_core::models::{ProjectColor, RoadmapProject};
 
 /// Mode for the roadmap project modal (Add or Edit)
 #[derive(Clone, Copy, PartialEq)]

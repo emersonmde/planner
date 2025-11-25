@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 // Re-export BadgeType from models for use by components
-pub use planner::models::BadgeType;
+pub use planner_core::models::BadgeType;
 
 #[component]
 pub fn Badge(

@@ -2,10 +2,10 @@
 
 ## Progress Status
 
-**Current Status:** Milestone 13 Complete - Preparing for 1.0
+**Current Status:** Milestone 14 Complete - Workspace Restructure Done
 
-- ✅ Milestones 1-13 Complete (core functionality)
-- 📋 **Milestones 14-16**: Final 1.0 preparation
+- ✅ Milestones 1-14 Complete (core functionality + workspace)
+- 📋 **Milestones 15-16**: Final 1.0 preparation
 
 **Build Status:** ✅ Compiles successfully (web + macOS desktop)
 
@@ -21,7 +21,7 @@
 - ✅ Two-signal state architecture (persistent preferences + exportable plan state)
 - ✅ Self-contained plan export/import for sharing and versioning
 - ✅ Settings modal with plan and sprint configuration
-- 🎯 Workspace restructure for proper CI/testing
+- ✅ Workspace restructure for proper CI/testing
 - 🎯 Core unit tests (models, utils)
 - 🎯 macOS desktop release
 
@@ -79,12 +79,12 @@
 
 ---
 
-## Milestone 14: Workspace Restructure & CI
+## Milestone 14: Workspace Restructure & CI ✅
 
 **Goal:** Convert to cargo workspace for proper CI testing and platform separation
 
-**Status:** 📋 Not Started
-**Estimated Effort:** 2-3 days
+**Status:** ✅ Complete
+**Completed:** 2025-11-25
 
 ### Context
 
@@ -130,11 +130,11 @@ planner/
 - Build web and desktop
 
 ### Acceptance Criteria
-- [ ] Workspace compiles successfully
-- [ ] `cargo test -p planner-core` runs on Linux CI
-- [ ] `cargo build -p planner-app --features desktop` works on macOS
-- [ ] Web deployment to GH Pages works
-- [ ] Pre-commit hook passes locally
+- [x] Workspace compiles successfully
+- [x] `cargo test -p planner-core` runs on Linux CI
+- [x] `cargo build -p planner-app --features desktop` works on macOS
+- [x] Web deployment to GH Pages works
+- [x] Pre-commit hook passes locally
 
 ---
 
@@ -264,10 +264,22 @@ preferences.write().team_members.push(new_member);
 
 ```
 planner/
+├── Cargo.toml             # Workspace root
+├── Dioxus.toml            # Web/desktop config (use `dx serve -p planner-app`)
 ├── crates/
 │   ├── planner-core/      # Models, utils (no platform deps)
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── models/
+│   │       └── utils/
 │   └── planner-app/       # Dioxus UI (platform-specific)
-├── assets/                # CSS, images
+│       ├── assets/        # CSS, images
+│       └── src/
+│           ├── main.rs
+│           ├── components/
+│           ├── state.rs
+│           ├── storage/
+│           └── plan_io.rs
 ├── docs/                  # Documentation
 └── .github/workflows/     # CI configuration
 ```

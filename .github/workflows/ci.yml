@@ -36,12 +36,29 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Clippy (web)
-        run: cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
+      - name: Clippy (core)
+        run: cargo clippy -p planner-core -- -D warnings
 
-  # Tests run on macOS to avoid Linux desktop dependency issues
-  test:
-    name: Test
+      - name: Clippy (app - web)
+        run: cargo clippy -p planner-app --target wasm32-unknown-unknown --features web -- -D warnings
+
+  # Core tests run on Linux (no platform deps)
+  test-core:
+    name: Test Core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run core tests
+        run: cargo test -p planner-core --verbose
+
+  # App tests run on macOS (needs desktop deps)
+  test-app:
+    name: Test App
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,8 +69,8 @@ jobs:
         with:
           key: macos-test
 
-      - name: Run tests
-        run: cargo test --lib --verbose
+      - name: Run app tests
+        run: cargo test -p planner-app --features desktop --verbose
 
   audit:
     name: Security Audit
@@ -69,7 +86,7 @@ jobs:
   build-web:
     name: Build Web
     runs-on: ubuntu-latest
-    needs: [check, test]
+    needs: [check, test-core]
     steps:
       - uses: actions/checkout@v4
 
@@ -85,17 +102,17 @@ jobs:
           tool: dioxus-cli@0.7
 
       - name: Build web bundle
-        run: dx bundle --release
+        run: dx bundle -p planner-app --release
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: target/dx/planner/release/web/public
+          path: target/dx/planner-app/release/web/public
 
   # macOS desktop build - primary desktop target
   build-desktop-macos:
     name: Build Desktop (macOS)
-    needs: [check, test]
+    needs: [check, test-core, test-app]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -109,12 +126,12 @@ jobs:
           key: macos
 
       - name: Build desktop
-        run: cargo build --features desktop --release --target aarch64-apple-darwin
+        run: cargo build -p planner-app --features desktop --release --target aarch64-apple-darwin
 
   # Windows desktop build - future release target, optional for now
   build-desktop-windows:
     name: Build Desktop (Windows)
-    needs: [check, test]
+    needs: [check, test-core]
     runs-on: windows-latest
     continue-on-error: true
     steps:
@@ -129,7 +146,7 @@ jobs:
           key: windows
 
       - name: Build desktop
-        run: cargo build --features desktop --release --target x86_64-pc-windows-msvc
+        run: cargo build -p planner-app --features desktop --release --target x86_64-pc-windows-msvc
 
   deploy:
     name: Deploy to GitHub Pages

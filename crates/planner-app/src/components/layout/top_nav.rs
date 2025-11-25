@@ -4,10 +4,10 @@ use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
 
 use crate::components::ui::SettingsModal;
-use crate::models::{PlanExport, PlanState, Preferences};
 use crate::plan_io::trigger_plan_download;
 use crate::state::{create_sample_plan, use_plan_state, use_preferences, use_viewing_session};
 use crate::storage;
+use planner_core::models::{PlanExport, PlanState, Preferences};
 
 /// Represents the different views in the application
 #[derive(Clone, Copy, PartialEq)]

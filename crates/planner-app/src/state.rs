@@ -19,8 +19,8 @@
 use chrono::NaiveDate;
 use dioxus::prelude::*;
 
-use crate::models::*;
-use crate::utils::get_quarter_start_date;
+use planner_core::models::*;
+use planner_core::utils::get_quarter_start_date;
 
 /// State for viewing an imported/loaded plan file
 ///
@@ -96,7 +96,7 @@ pub fn create_sample_plan() -> (Preferences, PlanState) {
 
     // Create preferences (team config)
     let mut preferences = Preferences {
-        schema_version: crate::models::PREFERENCES_SCHEMA_VERSION.to_string(),
+        schema_version: planner_core::models::PREFERENCES_SCHEMA_VERSION.to_string(),
         team_name: "Engineering Team".to_string(),
         team_members: Vec::new(),
         sprint_anchor_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("Valid anchor date"),

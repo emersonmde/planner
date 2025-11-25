@@ -1,4 +1,6 @@
 [application]
+# Note: Use `dx serve -p planner-app` from workspace root
+# The sub_package field is not supported in dx 0.7
 
 [web.app]
 # HTML title tag content

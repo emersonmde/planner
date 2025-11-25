@@ -2,8 +2,8 @@
 //!
 //! This module handles platform-specific file operations for saving and loading plans.
 
-use crate::models::PlanExport;
 use dioxus::logger::tracing::{debug, info};
+use planner_core::models::PlanExport;
 
 /// Trigger a file download with the plan export as JSON
 #[cfg(target_family = "wasm")]

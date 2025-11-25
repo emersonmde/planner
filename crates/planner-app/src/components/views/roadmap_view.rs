@@ -4,8 +4,8 @@ use crate::components::ui::{
     Badge, Button, ButtonVariant, CellStyle, ConfirmationDialog, DataTable, Input, ModalMode,
     ProjectName, RoadmapProjectModal, TableCell, TableHeader, TableHeaderCell, TableRow,
 };
-use crate::models::{get_capacity_status, ProjectColor, Role};
 use crate::state::{use_plan_state, use_preferences};
+use planner_core::models::{get_capacity_status, ProjectColor, Role};
 
 /// Roadmap view - displays roadmap projects table and quarter summary
 /// Reference: docs/ui-design.md section 7.1

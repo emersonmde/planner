@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use dioxus::prelude::{Signal, WritableExt};
 use uuid::Uuid;
 
-use crate::models::{Allocation, Assignment, PlanState};
+use planner_core::models::{Allocation, Assignment, PlanState};
 
 /// Tracks which project is selected for paintbrush mode
 #[derive(Clone, PartialEq, Debug)]

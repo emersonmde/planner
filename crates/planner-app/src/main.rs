@@ -5,8 +5,7 @@ use dioxus::prelude::*;
 
 use components::layout::View;
 use components::{AllocationView, RoadmapView, TechnicalView, TopNav};
-use planner::models::{self, PlanExport};
-use planner::utils;
+use planner_core::models::{self, PlanExport};
 use state::AppContext;
 
 /// Platform-specific modules (not in library due to GUI dependencies)

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::models::ProjectColor;
+use planner_core::models::ProjectColor;
 
 /// All available project colors
 const COLORS: [ProjectColor; 9] = [

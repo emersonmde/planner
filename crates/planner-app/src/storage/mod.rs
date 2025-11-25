@@ -9,11 +9,11 @@
 //! - WASM targets use localStorage
 //! - Native targets use file-based storage
 
-use crate::models::{PlanState, Preferences};
 #[cfg(not(target_family = "wasm"))]
 use dioxus::logger::tracing::{debug, error, info, warn};
 #[cfg(target_family = "wasm")]
 use dioxus::logger::tracing::{debug, info, warn};
+use planner_core::models::{PlanState, Preferences};
 
 // ============================================================================
 // Web Implementation (localStorage) - only for WASM targets
