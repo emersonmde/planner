@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and localStorage persistence.
 
-**Status:** Milestone 13 Complete (Plan Import/Export). The app features a "Plan Menu" (Notion/Linear-style) for file operations: Open, Save, Copy/Paste to clipboard, with keyboard shortcuts (⌘O, ⌘S). Viewing mode displays imported plans with unsaved changes detection. Two-signal architecture (Preferences + PlanState) with localStorage persistence. Full CRUD operations for all entities. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
+**Status:** Milestone 13 Complete - Preparing for 1.0. The app features a "Plan Menu" (Notion/Linear-style) for file operations: Open, Save, Copy/Paste to clipboard, with keyboard shortcuts (⌘O, ⌘S). Viewing mode displays imported plans with unsaved changes detection. Two-signal architecture (Preferences + PlanState) with localStorage persistence. Full CRUD operations for all entities. See `docs/roadmap.md` for the v1.0 roadmap (3 remaining milestones: M14-16).
 
 ## Development Commands
 
@@ -69,12 +69,18 @@ The repository includes a pre-commit hook that runs all quality checks before al
 
 ### Continuous Integration
 
-The project uses GitHub Actions for CI/CD:
-- **On push/PR**: Runs tests, fmt, clippy, and cargo audit
-- **On push to main**: Builds WASM bundle and deploys to GitHub Pages
-- **Location**: `.github/workflows/ci.yml`
+The project uses GitHub Actions for CI/CD (`.github/workflows/ci.yml`):
+- **Format/Lint**: Runs on Linux (cheapest) - fmt check, clippy for web target
+- **Tests**: Run on macOS (avoids Linux desktop dependency issues)
+- **Security Audit**: cargo audit on Linux
+- **Web Build**: Linux, deploys to GitHub Pages on main branch
+- **Desktop Builds**: macOS (required), Windows (optional, continue-on-error)
+- **Deploy**: Only after web build + macOS build + audit pass
 
-All CI checks mirror the pre-commit hook to ensure consistency.
+**Platform Notes:**
+- Tests must run on macOS due to dioxus-desktop Linux dependency conflicts
+- Linux desktop removed from CI (ashpd async-std/tokio conflict)
+- Windows build is optional and doesn't block deployment
 
 ### Project-Specific Notes
 - The project uses Cargo features for platform targeting: `web` (default), `desktop`, `mobile`
@@ -140,7 +146,7 @@ Both signals auto-save to localStorage on change via `use_effect`. State updates
 ## Key Documentation
 
 ### Getting Started
-- **`docs/roadmap.md`**: Complete v1.0 roadmap with 17 milestones, acceptance criteria, and post-1.0 vision
+- **`docs/roadmap.md`**: v1.0 roadmap with M14-16 remaining, acceptance criteria, and post-1.0 vision
 - **`docs/ui-design.md`**: Comprehensive UI/UX specification with design tokens, color system, component specs
 - **`docs/component-reference.md`**: Implementation examples for each component with HTML/CSS/Dioxus notes
 - **`docs/mockup.html`**: Working HTML reference implementation (open in browser to see visual design)
@@ -159,10 +165,9 @@ ADRs document major design decisions and their rationale. Located in `docs/adrs/
 - **`ADR-005-state-persistence.md`**: Two-signal architecture, three-tier localStorage persistence, self-contained export format
 
 ### Future Documentation
-These will be created in upcoming milestones:
-- **M14**: `docs/validation.md` - Validation rules, error messages, and user feedback patterns
-- **M16**: `docs/testing.md` - Testing strategy, coverage goals, and accessibility testing
-- **M17**: `docs/user-guide.md` - End-user documentation with workflows and keyboard shortcuts
+These may be created in upcoming milestones as needed:
+- **M15**: Testing documentation (if needed for core tests)
+- **M16**: User guide and release notes
 
 ## Milestone-Based Development
 
@@ -175,22 +180,27 @@ The project follows a structured milestone approach toward v1.0 release. **Never
 4. Manual testing
 5. Documentation updates
 
-**Current Status:** Milestone 13 Complete (Plan Import/Export)
-**Next Milestone:** Milestone 14 - Undo/Redo System
+**Current Status:** Milestone 13 Complete - Preparing for 1.0
+**Next Milestone:** Milestone 14 - Workspace Restructure & CI
 
-**v1.0 Goals** (M9-M17):
-- Two-signal state architecture (preferences + plan_state)
+**v1.0 Goals** (M14-M16):
+- M14: Cargo workspace for proper CI testing and platform separation
+- M15: Core unit tests for models and utilities
+- M16: Release preparation (version, README, empty states, release artifacts)
+
+**1.0 Success Criteria:**
+- Visual allocation grid with paintbrush mode and keyboard shortcuts
 - Full CRUD operations for roadmap projects, technical projects, and team members
+- Two-signal state architecture with localStorage persistence
 - Self-contained plan export/import for sharing and versioning
-- Undo/redo system for all operations
-- Comprehensive validation and user feedback
-- Accessibility compliance (WCAG AA)
-- Production-ready polish and documentation
+- Workspace restructure for proper CI/testing
+- Core unit tests (models, utils)
+- macOS desktop release
 
 **Post-1.0 Vision:**
 - Multi-team aggregation (Sr Manager view across multiple teams)
+- Windows/Linux desktop releases
 - Cloud sync and real-time collaboration
-- Advanced reporting and analytics
 
 When implementing new milestones:
 1. Read the milestone details in `docs/roadmap.md`
