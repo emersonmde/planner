@@ -7,11 +7,13 @@ pub enum ButtonVariant {
     Primary,
     #[allow(dead_code)] // Reserved for secondary actions in editing UI
     Secondary,
+    #[allow(dead_code)] // Reserved for destructive actions
+    Danger,
 }
 
 #[component]
 pub fn Button(
-    /// Button variant (primary or secondary)
+    /// Button variant (primary, secondary, or danger)
     variant: ButtonVariant,
     /// Button text content
     children: Element,
@@ -22,6 +24,7 @@ pub fn Button(
     let class_name = match variant {
         ButtonVariant::Primary => "btn btn-primary",
         ButtonVariant::Secondary => "btn btn-secondary",
+        ButtonVariant::Danger => "btn btn-danger",
     };
 
     rsx! {

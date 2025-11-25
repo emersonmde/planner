@@ -1,8 +1,9 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Local, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{Allocation, RoadmapProject, TechnicalProject};
+use crate::utils::get_next_quarter_info;
 
 /// Plan metadata for versioning and audit trail
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -308,6 +309,27 @@ impl PlanState {
     /// Mark the plan as modified
     pub fn mark_modified(&mut self) {
         self.metadata.mark_modified();
+    }
+}
+
+impl Default for PlanState {
+    /// Create default plan state for the next upcoming quarter
+    /// - Plan name: e.g., "Q1 2025"
+    /// - Start date: First Monday of next quarter (Jan 1, Apr 1, Jul 1, Oct 1)
+    /// - Weeks: 13 (standard quarter length)
+    fn default() -> Self {
+        let today = Local::now().date_naive();
+        let (_, _, quarter_start, quarter_name) = get_next_quarter_info(today);
+
+        Self {
+            quarter_name,
+            quarter_start_date: quarter_start,
+            num_weeks: 13,
+            roadmap_projects: Vec::new(),
+            technical_projects: Vec::new(),
+            allocations: Vec::new(),
+            metadata: PlanMetadata::new(),
+        }
     }
 }
 

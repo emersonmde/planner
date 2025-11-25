@@ -16,9 +16,9 @@ pub struct QuarterWeek {
 }
 
 impl QuarterWeek {
-    /// Format for display: "Wk 1/13"
+    /// Format for display: "Week 1", "Week 2", etc.
     pub fn format_week_number(&self) -> String {
-        format!("Wk {}/{}", self.week_number, self.total_weeks)
+        format!("Week {}", self.week_number)
     }
 
     /// Format sprint number: "Sprint 1", "Sprint 2", etc.
@@ -76,7 +76,8 @@ pub fn generate_quarter_weeks(
 }
 
 /// Find the first Monday on or after the given date
-/// Useful for ensuring quarter starts on Monday
+/// Useful for ensuring week starts on Monday
+#[allow(dead_code)] // Reserved for future use when normalizing dates to Monday
 pub fn find_first_monday(date: NaiveDate) -> NaiveDate {
     let weekday = date.weekday();
     match weekday {
@@ -91,10 +92,8 @@ pub fn find_first_monday(date: NaiveDate) -> NaiveDate {
 }
 
 /// Get the quarter start date for Q1-Q4 of a given year
-/// Q1: First Monday on/after Jan 1
-/// Q2: First Monday on/after Apr 1
-/// Q3: First Monday on/after Jul 1
-/// Q4: First Monday on/after Oct 1
+/// Returns the actual first day of the quarter:
+/// Q1: Jan 1, Q2: Apr 1, Q3: Jul 1, Q4: Oct 1
 pub fn get_quarter_start_date(year: i32, quarter: u8) -> Option<NaiveDate> {
     let month = match quarter {
         1 => 1,  // January
@@ -104,7 +103,7 @@ pub fn get_quarter_start_date(year: i32, quarter: u8) -> Option<NaiveDate> {
         _ => return None,
     };
 
-    NaiveDate::from_ymd_opt(year, month, 1).map(find_first_monday)
+    NaiveDate::from_ymd_opt(year, month, 1)
 }
 
 /// Calculate the number of full weeks between two dates
@@ -135,6 +134,37 @@ pub fn get_week_start(date: NaiveDate) -> NaiveDate {
         Weekday::Sun => 6,
     };
     date - Duration::days(days_since_monday)
+}
+
+/// Get the next quarter start info based on the given date
+///
+/// Returns the quarter that either:
+/// - Contains the current date (if we're in the first week of a quarter), OR
+/// - Is the upcoming quarter (if we're past the first week)
+///
+/// For simplicity, we return the quarter whose start date is >= today
+/// If today is past the Q4 start, we return Q1 of next year
+///
+/// # Returns
+/// (year, quarter_number, start_date, quarter_name) e.g., (2025, 1, Jan 6, "Q1 2025")
+pub fn get_next_quarter_info(today: NaiveDate) -> (i32, u8, NaiveDate, String) {
+    let year = today.year();
+
+    // Check each quarter of the current year
+    for quarter in 1..=4 {
+        if let Some(start) = get_quarter_start_date(year, quarter) {
+            if start >= today {
+                let name = format!("Q{} {}", quarter, year);
+                return (year, quarter, start, name);
+            }
+        }
+    }
+
+    // If we're past Q4, return Q1 of next year
+    let next_year = year + 1;
+    let start = get_quarter_start_date(next_year, 1).expect("Q1 should always be valid");
+    let name = format!("Q1 {}", next_year);
+    (next_year, 1, start, name)
 }
 
 /// Calculate sprint boundaries (start and end dates) for a given week
@@ -183,15 +213,25 @@ mod tests {
 
     #[test]
     fn test_get_quarter_start_date() {
-        // Q1 2025
+        // Q1 2025 - Jan 1, 2025
         let q1 = get_quarter_start_date(2025, 1).unwrap();
-        assert_eq!(q1.weekday(), Weekday::Mon);
         assert_eq!(q1.month(), 1);
+        assert_eq!(q1.day(), 1);
 
-        // Q2 2025
+        // Q2 2025 - Apr 1, 2025
         let q2 = get_quarter_start_date(2025, 2).unwrap();
-        assert_eq!(q2.weekday(), Weekday::Mon);
         assert_eq!(q2.month(), 4);
+        assert_eq!(q2.day(), 1);
+
+        // Q3 2025 - Jul 1, 2025
+        let q3 = get_quarter_start_date(2025, 3).unwrap();
+        assert_eq!(q3.month(), 7);
+        assert_eq!(q3.day(), 1);
+
+        // Q4 2025 - Oct 1, 2025
+        let q4 = get_quarter_start_date(2025, 4).unwrap();
+        assert_eq!(q4.month(), 10);
+        assert_eq!(q4.day(), 1);
     }
 
     #[test]

@@ -1,7 +1,8 @@
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 
 use super::TeamMember;
+use crate::utils::get_next_quarter_info;
 
 /// Team preferences - persisted to localStorage
 /// These settings are long-term and shared across all quarters
@@ -30,12 +31,15 @@ pub struct Preferences {
 #[allow(dead_code)] // Validation used in M14
 impl Preferences {
     /// Create new preferences with default values
+    /// Sprint anchor defaults to the start of the next quarter
     pub fn new(team_name: String) -> Self {
+        let today = Local::now().date_naive();
+        let (_, _, quarter_start, _) = get_next_quarter_info(today);
+
         Self {
             team_name,
             team_members: Vec::new(),
-            sprint_anchor_date: NaiveDate::from_ymd_opt(2024, 1, 1)
-                .expect("Valid sprint anchor date"),
+            sprint_anchor_date: quarter_start,
             sprint_length_weeks: 2,
             default_capacity: 12.0,
         }

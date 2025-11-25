@@ -79,10 +79,20 @@ pub fn AllocationView() -> Element {
     });
 
     // Calculate grid columns dynamically (engineers as columns now)
+    // Use min(1, len) to ensure at least one column exists for valid CSS
     let grid_template_columns = use_memo(move || {
         let prefs_data = preferences();
-        format!("120px repeat({}, 180px)", prefs_data.team_members.len())
+        let num_members = prefs_data.team_members.len();
+        if num_members == 0 {
+            // Single column for week headers when no team members
+            "120px".to_string()
+        } else {
+            format!("120px repeat({}, 180px)", num_members)
+        }
     });
+
+    // Check if we have team members (for empty state)
+    let has_team_members = !prefs_data.team_members.is_empty();
 
     // Event handlers
     let handle_keydown = move |evt: KeyboardEvent| {
@@ -625,8 +635,19 @@ pub fn AllocationView() -> Element {
 
             // Grid container
             div { class: "allocation-grid-container",
+                // Empty state when no team members
+                if !has_team_members {
+                    div { class: "allocation-grid-empty",
+                        div { class: "empty-state-icon", "👥" }
+                        h3 { class: "empty-state-title", "No Team Members" }
+                        p { class: "empty-state-description",
+                            "Add team members using the \"+Add Member\" button to start planning allocations."
+                        }
+                    }
+                }
+
                 div {
-                    class: "allocation-grid",
+                    class: if has_team_members { "allocation-grid" } else { "allocation-grid hidden" },
                     style: "grid-template-columns: {grid_template_columns()};",
 
                     // Top-left corner cell

@@ -6,7 +6,7 @@ use components::layout::View;
 use components::ui::{TeamMemberModal, TeamMemberModalMode};
 use components::{AllocationView, RoadmapView, TechnicalView, TopNav};
 use models::Role;
-use state::{create_sample_plan, AppContext};
+use state::AppContext;
 
 /// Define a components module that contains all shared components for our app.
 mod components;
@@ -34,15 +34,9 @@ fn main() {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
-    // Load preferences from localStorage or use sample data
-    let (initial_prefs, initial_state) = {
-        let (sample_prefs, sample_state) = create_sample_plan();
-
-        // Try to load preferences from localStorage (web only)
-        let prefs = storage::load_preferences().unwrap_or(sample_prefs);
-
-        (prefs, sample_state)
-    };
+    // Load preferences and plan state from storage, falling back to smart defaults
+    let initial_prefs = storage::load_preferences().unwrap_or_default();
+    let initial_state = storage::load_plan_state().unwrap_or_default();
 
     // Create two independent signals
     let mut preferences = use_signal(|| initial_prefs);
@@ -51,8 +45,13 @@ fn App() -> Element {
     // Auto-save preferences to localStorage when they change
     use_effect(move || {
         let prefs = preferences();
-        // Save in background (ignore errors for now - could log them in production)
         let _ = storage::save_preferences(&prefs);
+    });
+
+    // Auto-save plan state to localStorage when it changes
+    use_effect(move || {
+        let state = plan_state();
+        let _ = storage::save_plan_state(&state);
     });
 
     // Provide the app context with two signals to all child components
