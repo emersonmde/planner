@@ -2,12 +2,13 @@
 
 ## Progress Status
 
-**Current Status:** Milestone 14 Complete - Workspace Restructure Done
+**Current Status:** Milestone 15 Complete - Core Tests Done
 
-- ✅ Milestones 1-14 Complete (core functionality + workspace)
-- 📋 **Milestones 15-16**: Final 1.0 preparation
+- ✅ Milestones 1-15 Complete (core functionality + workspace + tests)
+- 📋 **Milestone 16**: Final 1.0 release preparation
 
 **Build Status:** ✅ Compiles successfully (web + macOS desktop)
+**Test Status:** ✅ 45 tests passing in planner-core
 
 ---
 
@@ -138,12 +139,12 @@ planner/
 
 ---
 
-## Milestone 15: Core Tests
+## Milestone 15: Core Tests ✅
 
 **Goal:** Add unit tests for platform-independent code
 
-**Status:** 📋 Not Started
-**Estimated Effort:** 1-2 days
+**Status:** ✅ Complete
+**Completed:** 2025-11-25
 
 ### Context
 
@@ -151,25 +152,35 @@ With workspace restructure complete, we can test `planner-core` on any platform.
 
 ### Tasks
 
-#### 15.1: Model Tests
+#### 15.1: Model Tests ✅
 - Plan calculations (allocated weeks, capacity utilization)
 - PlanExport serialization/deserialization round-trip
 - Validation logic (team member, project, allocation)
 - Schema version handling (backward compatibility)
 
-#### 15.2: Utility Tests
+#### 15.2: Utility Tests ✅
 - Date helpers (week calculations, sprint boundaries, quarter dates)
 - Capacity calculations
 
-#### 15.3: CI Integration
+#### 15.3: CI Integration ✅
 - Run tests in CI on Linux
 - Coverage reporting (optional)
 
+### Test Coverage Summary (45 tests)
+
+| Module | Tests | Coverage |
+|--------|-------|----------|
+| plan.rs | 16 | Allocation methods, capacity calculations, get_capacity_status |
+| plan_state.rs | 10 | PlanState lookups, allocation calculations, date updates |
+| plan_export.rs | 6 | Export/import round-trip, validation |
+| preferences.rs | 7 | Creation, defaults, validation, schema versioning |
+| date_helpers.rs | 6 | Week calculations, sprint boundaries, quarter dates |
+
 ### Acceptance Criteria
-- [ ] 80%+ test coverage on `planner-core`
-- [ ] All tests pass in CI
-- [ ] Export/import round-trip tested
-- [ ] Edge cases covered (empty data, boundary dates)
+- [x] 80%+ test coverage on `planner-core`
+- [x] All tests pass in CI
+- [x] Export/import round-trip tested
+- [x] Edge cases covered (empty data, boundary dates)
 
 ---
 

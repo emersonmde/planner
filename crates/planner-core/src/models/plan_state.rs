@@ -366,4 +366,273 @@ mod tests {
         assert_eq!(metadata.created_at, created);
         assert!(metadata.modified_at > modified);
     }
+
+    // ===========================================
+    // PlanState Calculation Tests
+    // ===========================================
+
+    use crate::models::{
+        Allocation, Assignment, ProjectColor, RoadmapProject, Role, TeamMember, TechnicalProject,
+    };
+
+    fn create_test_state() -> (PlanState, Uuid, Uuid, Uuid, Uuid) {
+        let quarter_start = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let mut state = PlanState::new("Q1 2025".to_string(), quarter_start, 13);
+
+        // Add a roadmap project
+        let roadmap_id = Uuid::new_v4();
+        state.roadmap_projects.push(RoadmapProject {
+            id: roadmap_id,
+            name: "Feature A".to_string(),
+            eng_estimate: 4.0,
+            sci_estimate: 2.0,
+            start_date: quarter_start,
+            launch_date: quarter_start + chrono::Duration::weeks(8),
+            color: ProjectColor::Blue,
+            notes: None,
+        });
+
+        // Add technical projects
+        let tech1_id = Uuid::new_v4();
+        let tech2_id = Uuid::new_v4();
+        state.technical_projects.push(TechnicalProject {
+            id: tech1_id,
+            name: "API Work".to_string(),
+            roadmap_project_id: Some(roadmap_id),
+            eng_estimate: 3.0,
+            sci_estimate: 0.0,
+            start_date: quarter_start,
+            expected_completion: None,
+            notes: None,
+        });
+        state.technical_projects.push(TechnicalProject {
+            id: tech2_id,
+            name: "ML Model".to_string(),
+            roadmap_project_id: Some(roadmap_id),
+            eng_estimate: 0.0,
+            sci_estimate: 2.0,
+            start_date: quarter_start,
+            expected_completion: None,
+            notes: None,
+        });
+
+        (state, roadmap_id, tech1_id, tech2_id, Uuid::new_v4())
+    }
+
+    #[test]
+    fn test_get_roadmap_project() {
+        let (state, roadmap_id, _, _, _) = create_test_state();
+
+        let project = state.get_roadmap_project(&roadmap_id);
+        assert!(project.is_some());
+        assert_eq!(project.unwrap().name, "Feature A");
+
+        let nonexistent = state.get_roadmap_project(&Uuid::new_v4());
+        assert!(nonexistent.is_none());
+    }
+
+    #[test]
+    fn test_get_technical_project() {
+        let (state, _, tech1_id, _, _) = create_test_state();
+
+        let project = state.get_technical_project(&tech1_id);
+        assert!(project.is_some());
+        assert_eq!(project.unwrap().name, "API Work");
+
+        let nonexistent = state.get_technical_project(&Uuid::new_v4());
+        assert!(nonexistent.is_none());
+    }
+
+    #[test]
+    fn test_calculate_project_allocated_weeks() {
+        let (mut state, _, tech1_id, tech2_id, _) = create_test_state();
+        let member_id = Uuid::new_v4();
+
+        // Add 2.5 weeks to tech1 (2 full + 1 split)
+        let week1 = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let week2 = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
+        let week3 = NaiveDate::from_ymd_opt(2025, 1, 20).unwrap();
+
+        let mut alloc1 = Allocation::new(member_id, week1);
+        alloc1.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc1);
+
+        let mut alloc2 = Allocation::new(member_id, week2);
+        alloc2.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc2);
+
+        let mut alloc3 = Allocation::new(member_id, week3);
+        alloc3.assignments.push(Assignment::new(tech1_id, 50.0));
+        alloc3.assignments.push(Assignment::new(tech2_id, 50.0));
+        state.allocations.push(alloc3);
+
+        assert_eq!(state.calculate_project_allocated_weeks(&tech1_id), 2.5);
+        assert_eq!(state.calculate_project_allocated_weeks(&tech2_id), 0.5);
+    }
+
+    #[test]
+    fn test_calculate_team_member_allocated_weeks() {
+        let (mut state, _, tech1_id, _, _) = create_test_state();
+        let member1_id = Uuid::new_v4();
+        let member2_id = Uuid::new_v4();
+
+        // member1 gets 3 weeks at 100%
+        for i in 0..3 {
+            let week = NaiveDate::from_ymd_opt(2025, 1, 6 + i * 7).unwrap();
+            let mut alloc = Allocation::new(member1_id, week);
+            alloc.assignments.push(Assignment::new(tech1_id, 100.0));
+            state.allocations.push(alloc);
+        }
+
+        // member2 gets 2 weeks at 50%
+        for i in 0..2 {
+            let week = NaiveDate::from_ymd_opt(2025, 1, 6 + i * 7).unwrap();
+            let mut alloc = Allocation::new(member2_id, week);
+            alloc.assignments.push(Assignment::new(tech1_id, 50.0));
+            state.allocations.push(alloc);
+        }
+
+        assert_eq!(
+            state.calculate_team_member_allocated_weeks(&member1_id),
+            3.0
+        );
+        assert_eq!(
+            state.calculate_team_member_allocated_weeks(&member2_id),
+            1.0
+        );
+    }
+
+    #[test]
+    fn test_update_technical_project_dates() {
+        let (mut state, _, tech1_id, _, _) = create_test_state();
+        let member_id = Uuid::new_v4();
+        let sprint_anchor = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        // Allocate weeks 2 and 4 (not consecutive)
+        let week2 = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
+        let week4 = NaiveDate::from_ymd_opt(2025, 1, 27).unwrap();
+
+        let mut alloc1 = Allocation::new(member_id, week2);
+        alloc1.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc1);
+
+        let mut alloc2 = Allocation::new(member_id, week4);
+        alloc2.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc2);
+
+        // Update dates (2-week sprints)
+        state.update_technical_project_dates(&tech1_id, sprint_anchor, 2);
+
+        let project = state.get_technical_project(&tech1_id).unwrap();
+
+        // First allocation in week 2 (Jan 13) -> sprint 1 starts Jan 6
+        assert_eq!(
+            project.start_date,
+            NaiveDate::from_ymd_opt(2025, 1, 6).unwrap()
+        );
+
+        // Last allocation in week 4 (Jan 27) -> sprint 2 ends Feb 2
+        assert_eq!(
+            project.expected_completion,
+            Some(NaiveDate::from_ymd_opt(2025, 2, 2).unwrap())
+        );
+    }
+
+    #[test]
+    fn test_update_technical_project_dates_no_allocations() {
+        let (mut state, _, tech1_id, _, _) = create_test_state();
+        let original_start = state.get_technical_project(&tech1_id).unwrap().start_date;
+        let sprint_anchor = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        // Update with no allocations - should leave dates unchanged
+        state.update_technical_project_dates(&tech1_id, sprint_anchor, 2);
+
+        let project = state.get_technical_project(&tech1_id).unwrap();
+        assert_eq!(project.start_date, original_start);
+        assert_eq!(project.expected_completion, None);
+    }
+
+    #[test]
+    fn test_get_assigned_team_members() {
+        let (mut state, _, tech1_id, tech2_id, _) = create_test_state();
+        let member1_id = Uuid::new_v4();
+        let member2_id = Uuid::new_v4();
+
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        // member1 works on tech1
+        let mut alloc1 = Allocation::new(member1_id, week);
+        alloc1.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc1);
+
+        // member2 works on both
+        let mut alloc2 = Allocation::new(member2_id, week);
+        alloc2.assignments.push(Assignment::new(tech1_id, 50.0));
+        alloc2.assignments.push(Assignment::new(tech2_id, 50.0));
+        state.allocations.push(alloc2);
+
+        let tech1_members = state.get_assigned_team_members(&tech1_id);
+        assert_eq!(tech1_members.len(), 2);
+        assert!(tech1_members.contains(&member1_id));
+        assert!(tech1_members.contains(&member2_id));
+
+        let tech2_members = state.get_assigned_team_members(&tech2_id);
+        assert_eq!(tech2_members.len(), 1);
+        assert!(tech2_members.contains(&member2_id));
+    }
+
+    #[test]
+    fn test_calculate_technical_project_allocated_by_role() {
+        let (mut state, _, tech1_id, _, _) = create_test_state();
+
+        // Create team members with specific roles
+        let eng_id = Uuid::new_v4();
+        let sci_id = Uuid::new_v4();
+        let team_members = vec![
+            TeamMember {
+                id: eng_id,
+                name: "Engineer".to_string(),
+                role: Role::Engineering,
+                capacity: 10.0,
+            },
+            TeamMember {
+                id: sci_id,
+                name: "Scientist".to_string(),
+                role: Role::Science,
+                capacity: 8.0,
+            },
+        ];
+
+        // Engineer allocates 2 weeks
+        let week1 = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let week2 = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
+
+        let mut alloc1 = Allocation::new(eng_id, week1);
+        alloc1.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc1);
+
+        let mut alloc2 = Allocation::new(eng_id, week2);
+        alloc2.assignments.push(Assignment::new(tech1_id, 100.0));
+        state.allocations.push(alloc2);
+
+        // Scientist allocates 1 week at 50%
+        let mut alloc3 = Allocation::new(sci_id, week1);
+        alloc3.assignments.push(Assignment::new(tech1_id, 50.0));
+        state.allocations.push(alloc3);
+
+        // Create role lookup closure
+        let get_role = |member_id: &Uuid| -> Option<Role> {
+            team_members
+                .iter()
+                .find(|m| &m.id == member_id)
+                .map(|m| m.role)
+        };
+
+        let (eng_alloc, sci_alloc, total) =
+            state.calculate_technical_project_allocated_by_role(&tech1_id, get_role);
+
+        assert_eq!(eng_alloc, 2.0);
+        assert_eq!(sci_alloc, 0.5);
+        assert_eq!(total, 2.5);
+    }
 }

@@ -522,3 +522,330 @@ pub fn get_capacity_status(allocated: f32, estimated: f32) -> super::BadgeType {
         BadgeType::Error // More than 25% off from estimate
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::BadgeType;
+    use chrono::NaiveDate;
+
+    // ===========================================
+    // Allocation Tests
+    // ===========================================
+
+    #[test]
+    fn test_allocation_new() {
+        let member_id = Uuid::new_v4();
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let alloc = Allocation::new(member_id, week);
+
+        assert_eq!(alloc.team_member_id, member_id);
+        assert_eq!(alloc.week_start_date, week);
+        assert!(alloc.assignments.is_empty());
+    }
+
+    #[test]
+    fn test_allocation_is_empty() {
+        let member_id = Uuid::new_v4();
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        let empty_alloc = Allocation::new(member_id, week);
+        assert!(empty_alloc.is_empty());
+
+        let mut full_alloc = Allocation::new(member_id, week);
+        full_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 100.0));
+        assert!(!full_alloc.is_empty());
+    }
+
+    #[test]
+    fn test_allocation_total_percentage() {
+        let member_id = Uuid::new_v4();
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        // Empty allocation
+        let empty_alloc = Allocation::new(member_id, week);
+        assert_eq!(empty_alloc.total_percentage(), 0.0);
+
+        // Single 100% allocation
+        let mut full_alloc = Allocation::new(member_id, week);
+        full_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 100.0));
+        assert_eq!(full_alloc.total_percentage(), 100.0);
+
+        // Split allocation (50/50)
+        let mut split_alloc = Allocation::new(member_id, week);
+        split_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 50.0));
+        split_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 50.0));
+        assert_eq!(split_alloc.total_percentage(), 100.0);
+
+        // Partial allocation
+        let mut partial_alloc = Allocation::new(member_id, week);
+        partial_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 60.0));
+        assert_eq!(partial_alloc.total_percentage(), 60.0);
+    }
+
+    #[test]
+    fn test_allocation_is_full() {
+        let member_id = Uuid::new_v4();
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        // Empty is not full
+        let empty_alloc = Allocation::new(member_id, week);
+        assert!(!empty_alloc.is_full());
+
+        // 100% is full
+        let mut full_alloc = Allocation::new(member_id, week);
+        full_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 100.0));
+        assert!(full_alloc.is_full());
+
+        // 50/50 split is full
+        let mut split_alloc = Allocation::new(member_id, week);
+        split_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 50.0));
+        split_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 50.0));
+        assert!(split_alloc.is_full());
+
+        // 60% is not full
+        let mut partial_alloc = Allocation::new(member_id, week);
+        partial_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 60.0));
+        assert!(!partial_alloc.is_full());
+    }
+
+    #[test]
+    fn test_allocation_is_valid() {
+        let member_id = Uuid::new_v4();
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+
+        // Empty is valid
+        let empty_alloc = Allocation::new(member_id, week);
+        assert!(empty_alloc.is_valid());
+
+        // 100% is valid
+        let mut full_alloc = Allocation::new(member_id, week);
+        full_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 100.0));
+        assert!(full_alloc.is_valid());
+
+        // 60% is invalid (not empty, not 100%)
+        let mut partial_alloc = Allocation::new(member_id, week);
+        partial_alloc
+            .assignments
+            .push(Assignment::new(Uuid::new_v4(), 60.0));
+        assert!(!partial_alloc.is_valid());
+    }
+
+    // ===========================================
+    // get_capacity_status Tests
+    // ===========================================
+
+    #[test]
+    fn test_capacity_status_neutral() {
+        // 0 allocated, 0 estimated -> Neutral
+        assert_eq!(get_capacity_status(0.0, 0.0), BadgeType::Neutral);
+    }
+
+    #[test]
+    fn test_capacity_status_warning_no_estimate() {
+        // Allocated without estimate -> Warning
+        assert_eq!(get_capacity_status(5.0, 0.0), BadgeType::Warning);
+        assert_eq!(get_capacity_status(0.1, 0.0), BadgeType::Warning);
+    }
+
+    #[test]
+    fn test_capacity_status_success() {
+        // Within 5% of estimate -> Success
+        assert_eq!(get_capacity_status(10.0, 10.0), BadgeType::Success); // Exact match
+        assert_eq!(get_capacity_status(10.5, 10.0), BadgeType::Success); // 5% over
+        assert_eq!(get_capacity_status(9.5, 10.0), BadgeType::Success); // 5% under
+        assert_eq!(get_capacity_status(10.4, 10.0), BadgeType::Success); // 4% over
+    }
+
+    #[test]
+    fn test_capacity_status_warning() {
+        // 5-25% off from estimate -> Warning
+        assert_eq!(get_capacity_status(10.6, 10.0), BadgeType::Warning); // 6% over
+        assert_eq!(get_capacity_status(9.4, 10.0), BadgeType::Warning); // 6% under
+        assert_eq!(get_capacity_status(12.5, 10.0), BadgeType::Warning); // 25% over
+        assert_eq!(get_capacity_status(7.5, 10.0), BadgeType::Warning); // 25% under
+    }
+
+    #[test]
+    fn test_capacity_status_error() {
+        // More than 25% off from estimate -> Error
+        assert_eq!(get_capacity_status(12.6, 10.0), BadgeType::Error); // 26% over
+        assert_eq!(get_capacity_status(7.4, 10.0), BadgeType::Error); // 26% under
+        assert_eq!(get_capacity_status(20.0, 10.0), BadgeType::Error); // 100% over
+        assert_eq!(get_capacity_status(1.0, 10.0), BadgeType::Error); // 90% under
+    }
+
+    // ===========================================
+    // Plan Calculation Tests
+    // ===========================================
+
+    fn create_test_plan() -> Plan {
+        let eng1 = TeamMember {
+            id: Uuid::new_v4(),
+            name: "Engineer 1".to_string(),
+            role: Role::Engineering,
+            capacity: 10.0,
+        };
+        let eng2 = TeamMember {
+            id: Uuid::new_v4(),
+            name: "Engineer 2".to_string(),
+            role: Role::Engineering,
+            capacity: 8.0,
+        };
+        let sci1 = TeamMember {
+            id: Uuid::new_v4(),
+            name: "Scientist 1".to_string(),
+            role: Role::Science,
+            capacity: 6.0,
+        };
+
+        Plan {
+            version: "1.0".to_string(),
+            quarter: "Q1 2025".to_string(),
+            quarter_start_date: NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
+            weeks_in_quarter: 13,
+            sprint_length_weeks: 2,
+            sprint_anchor_date: NaiveDate::from_ymd_opt(2025, 1, 6).unwrap(),
+            team_name: "Test Team".to_string(),
+            team_members: vec![eng1, eng2, sci1],
+            roadmap_projects: vec![],
+            technical_projects: vec![],
+            allocations: vec![],
+        }
+    }
+
+    #[test]
+    fn test_calculate_total_capacity() {
+        let plan = create_test_plan();
+
+        let (eng_cap, sci_cap, total_cap) = plan.calculate_total_capacity();
+
+        assert_eq!(eng_cap, 18.0); // 10 + 8
+        assert_eq!(sci_cap, 6.0);
+        assert_eq!(total_cap, 24.0);
+    }
+
+    #[test]
+    fn test_calculate_total_capacity_empty_team() {
+        let mut plan = create_test_plan();
+        plan.team_members.clear();
+
+        let (eng_cap, sci_cap, total_cap) = plan.calculate_total_capacity();
+
+        assert_eq!(eng_cap, 0.0);
+        assert_eq!(sci_cap, 0.0);
+        assert_eq!(total_cap, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_total_allocated_no_allocations() {
+        let plan = create_test_plan();
+
+        let (eng_alloc, sci_alloc, total_alloc) = plan.calculate_total_allocated();
+
+        assert_eq!(eng_alloc, 0.0);
+        assert_eq!(sci_alloc, 0.0);
+        assert_eq!(total_alloc, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_total_allocated_with_allocations() {
+        let mut plan = create_test_plan();
+        let eng1_id = plan.team_members[0].id;
+        let sci1_id = plan.team_members[2].id;
+        let project_id = Uuid::new_v4();
+
+        // Add allocations: 2 weeks for eng1 (100% each), 1 week for sci1 (50%)
+        let week1 = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let week2 = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
+
+        let mut alloc1 = Allocation::new(eng1_id, week1);
+        alloc1.assignments.push(Assignment::new(project_id, 100.0));
+        plan.allocations.push(alloc1);
+
+        let mut alloc2 = Allocation::new(eng1_id, week2);
+        alloc2.assignments.push(Assignment::new(project_id, 100.0));
+        plan.allocations.push(alloc2);
+
+        let mut alloc3 = Allocation::new(sci1_id, week1);
+        alloc3.assignments.push(Assignment::new(project_id, 50.0));
+        plan.allocations.push(alloc3);
+
+        let (eng_alloc, sci_alloc, total_alloc) = plan.calculate_total_allocated();
+
+        assert_eq!(eng_alloc, 2.0); // 2 weeks at 100%
+        assert_eq!(sci_alloc, 0.5); // 1 week at 50%
+        assert_eq!(total_alloc, 2.5);
+    }
+
+    #[test]
+    fn test_calculate_allocated_weeks_for_member() {
+        let mut plan = create_test_plan();
+        let eng1_id = plan.team_members[0].id;
+        let eng2_id = plan.team_members[1].id;
+        let project_id = Uuid::new_v4();
+
+        // eng1 gets 3 weeks of allocation
+        for i in 0..3 {
+            let week = NaiveDate::from_ymd_opt(2025, 1, 6 + i * 7).unwrap();
+            let mut alloc = Allocation::new(eng1_id, week);
+            alloc.assignments.push(Assignment::new(project_id, 100.0));
+            plan.allocations.push(alloc);
+        }
+
+        // eng2 gets 1 week at 50%
+        let week = NaiveDate::from_ymd_opt(2025, 1, 6).unwrap();
+        let mut alloc = Allocation::new(eng2_id, week);
+        alloc.assignments.push(Assignment::new(project_id, 50.0));
+        plan.allocations.push(alloc);
+
+        assert_eq!(plan.calculate_allocated_weeks(&eng1_id), 3.0);
+        assert_eq!(plan.calculate_allocated_weeks(&eng2_id), 0.5);
+    }
+
+    #[test]
+    fn test_calculate_project_allocated_weeks() {
+        let mut plan = create_test_plan();
+        let eng1_id = plan.team_members[0].id;
+        let project1_id = Uuid::new_v4();
+        let project2_id = Uuid::new_v4();
+
+        // Project 1: 2 full weeks from eng1
+        for i in 0..2 {
+            let week = NaiveDate::from_ymd_opt(2025, 1, 6 + i * 7).unwrap();
+            let mut alloc = Allocation::new(eng1_id, week);
+            alloc.assignments.push(Assignment::new(project1_id, 100.0));
+            plan.allocations.push(alloc);
+        }
+
+        // Project 2: 1 week split allocation (50%)
+        let week = NaiveDate::from_ymd_opt(2025, 1, 20).unwrap();
+        let mut alloc = Allocation::new(eng1_id, week);
+        alloc.assignments.push(Assignment::new(project1_id, 50.0));
+        alloc.assignments.push(Assignment::new(project2_id, 50.0));
+        plan.allocations.push(alloc);
+
+        assert_eq!(plan.calculate_project_allocated_weeks(&project1_id), 2.5); // 2 full + 0.5 split
+        assert_eq!(plan.calculate_project_allocated_weeks(&project2_id), 0.5); // 0.5 from split
+    }
+}
