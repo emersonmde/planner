@@ -1,3 +1,4 @@
+use dioxus::logger::tracing::info;
 use dioxus::prelude::*;
 #[cfg(target_family = "wasm")]
 use wasm_bindgen::JsCast;
@@ -53,13 +54,14 @@ pub fn TopNav(active_view: Signal<View>) -> Element {
     register_keyboard_shortcuts(file_input_id, preferences, plan_state);
 
     rsx! {
-        // Hidden file input for import (web)
+        // Hidden file input for import (web only - desktop uses native dialog)
         input {
             r#type: "file",
             id: "{file_input_id()}",
             accept: ".json,application/json",
             style: "display: none;",
             onchange: move |_| {
+                #[cfg(target_family = "wasm")]
                 handle_file_import(file_input_id(), preferences, plan_state, viewing_session);
             },
         }
@@ -116,12 +118,14 @@ pub fn TopNav(active_view: Signal<View>) -> Element {
         if show_settings() {
             SettingsModal {
                 on_clear_preferences: move |_| {
+                    info!("Clearing all preferences and plan state");
                     let _ = storage::clear_preferences();
                     let _ = storage::clear_plan_state();
                     preferences.set(Preferences::default());
                     plan_state.set(PlanState::default());
                 },
                 on_load_sample_data: move |_| {
+                    info!("Loading sample plan data");
                     let (sample_prefs, sample_state) = create_sample_plan();
                     preferences.set(sample_prefs);
                     plan_state.set(sample_state);
@@ -239,6 +243,7 @@ fn ViewingModeMenu(
             icon: "📌",
             label: "Adopt This Plan",
             onclick: move |_| {
+                info!("Adopting viewed plan as local plan");
                 show_plan_menu.set(false);
                 let _ = storage::save_preferences(&preferences());
                 let _ = storage::save_plan_state(&plan_state());
@@ -296,26 +301,110 @@ fn NormalModeMenu(
 ) -> Element {
     rsx! {
         // Open Plan
-        MenuItem {
-            icon: "📂",
-            label: "Open Plan...",
-            shortcut: Some("⌘O"),
-            onclick: move |_| {
-                show_plan_menu.set(false);
-                trigger_file_open(file_input_id(), preferences, plan_state, viewing_session);
+        button {
+            class: "plan-menu-item",
+            onclick: move |_| async move {
+                // NOTE: Don't close menu before async operation - component unmount drops the future
+                #[cfg(target_family = "wasm")]
+                {
+                    show_plan_menu.set(false);
+                    trigger_file_open(file_input_id());
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    use dioxus::logger::tracing::{debug, error, info};
+                    debug!("Opening file dialog (async handler)");
+                    let file = rfd::AsyncFileDialog::new()
+                        .add_filter("Plan Files", &["json"])
+                        .add_filter("All Files", &["*"])
+                        .set_title("Open Plan")
+                        .pick_file()
+                        .await;
+                    // Close menu after dialog returns (not before, or future gets dropped)
+                    show_plan_menu.set(false);
+                    info!("Dialog returned: {:?}", file.is_some());
+                    if let Some(file) = file {
+                        let filename = file.file_name();
+                        let path = file.path().to_path_buf();
+                        info!("Reading file: {} from {:?}", filename, path);
+                        // Use sync read - async read() doesn't complete properly in Dioxus
+                        match std::fs::read_to_string(&path) {
+                            Ok(json_str) => {
+                                info!("File read, {} bytes", json_str.len());
+                                info!("Parsing JSON...");
+                                match load_plan_from_json(
+                                    &json_str,
+                                    &filename,
+                                    &mut preferences,
+                                    &mut plan_state,
+                                    &mut viewing_session,
+                                ) {
+                                    Ok(()) => info!("Plan loaded successfully!"),
+                                    Err(e) => error!("Failed to load plan: {}", e),
+                                }
+                            }
+                            Err(e) => error!("Failed to read file: {}", e),
+                        }
+                    } else {
+                        info!("Dialog was cancelled");
+                    }
+                }
             },
+            span { class: "menu-icon", "📂" }
+            span { class: "menu-label", "Open Plan..." }
+            span { class: "menu-shortcut", "⌘O" }
         }
 
         // Save Plan
-        MenuItem {
-            icon: "💾",
-            label: "Save Plan...",
-            shortcut: Some("⌘S"),
-            onclick: move |_| {
-                show_plan_menu.set(false);
-                let export = PlanExport::from_signals(preferences(), plan_state());
-                let _ = trigger_plan_download(&export);
+        button {
+            class: "plan-menu-item",
+            onclick: move |_| async move {
+                #[cfg(target_family = "wasm")]
+                {
+                    show_plan_menu.set(false);
+                    let export = PlanExport::from_signals(preferences(), plan_state());
+                    let _ = trigger_plan_download(&export);
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    use dioxus::logger::tracing::{debug, error, info};
+                    let export = PlanExport::from_signals(preferences(), plan_state());
+                    let json = match serde_json::to_string_pretty(&export) {
+                        Ok(j) => j,
+                        Err(e) => {
+                            error!("Failed to serialize: {}", e);
+                            return;
+                        }
+                    };
+                    let filename = format!(
+                        "plan-{}-{}.json",
+                        export.team_name.to_lowercase().replace(' ', "-"),
+                        export.quarter_name.to_lowercase().replace(' ', "-")
+                    );
+                    debug!("Opening save dialog (async handler)");
+                    let file = rfd::AsyncFileDialog::new()
+                        .add_filter("Plan Files", &["json"])
+                        .set_file_name(&filename)
+                        .set_title("Save Plan")
+                        .save_file()
+                        .await;
+                    // Close menu after dialog returns (not before, or future gets dropped)
+                    show_plan_menu.set(false);
+                    debug!("Save dialog returned: {:?}", file.is_some());
+                    if let Some(file) = file {
+                        let path = file.path().to_path_buf();
+                        // Use sync write - async write() doesn't complete properly in Dioxus
+                        if let Err(e) = std::fs::write(&path, &json) {
+                            error!("Failed to write file: {}", e);
+                        } else {
+                            info!("Plan saved to {:?}", path);
+                        }
+                    }
+                }
             },
+            span { class: "menu-icon", "💾" }
+            span { class: "menu-label", "Save Plan..." }
+            span { class: "menu-shortcut", "⌘S" }
         }
 
         div { class: "plan-menu-separator" }
@@ -487,6 +576,7 @@ fn restore_from_local_storage(
     mut plan_state: Signal<PlanState>,
     mut viewing_session: Signal<Option<crate::state::ViewingSession>>,
 ) {
+    info!("Closing viewed plan, restoring from local storage");
     let restored_prefs = storage::load_preferences().unwrap_or_default();
     let restored_state = storage::load_plan_state().unwrap_or_default();
     preferences.set(restored_prefs);
@@ -496,78 +586,18 @@ fn restore_from_local_storage(
     crate::plan_io::clear_url_plan_param();
 }
 
-/// Trigger file open dialog
-#[allow(unused_variables)]
-fn trigger_file_open(
-    file_input_id: String,
-    preferences: Signal<Preferences>,
-    plan_state: Signal<PlanState>,
-    viewing_session: Signal<Option<crate::state::ViewingSession>>,
-) {
-    // Web: Click the hidden file input
-    #[cfg(target_family = "wasm")]
-    {
-        if let Some(window) = web_sys::window() {
-            if let Some(document) = window.document() {
-                if let Some(input) = document.get_element_by_id(&file_input_id) {
-                    if let Ok(html_input) = input.dyn_into::<web_sys::HtmlInputElement>() {
-                        html_input.click();
-                    }
+/// Trigger file open dialog (web only - clicks hidden file input)
+#[cfg(target_family = "wasm")]
+fn trigger_file_open(file_input_id: String) {
+    if let Some(window) = web_sys::window() {
+        if let Some(document) = window.document() {
+            if let Some(input) = document.get_element_by_id(&file_input_id) {
+                if let Ok(html_input) = input.dyn_into::<web_sys::HtmlInputElement>() {
+                    html_input.click();
                 }
             }
         }
     }
-
-    // Desktop: Use native file dialog
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let mut prefs_signal = preferences;
-        let mut state_signal = plan_state;
-        let mut viewing_signal = viewing_session;
-
-        dioxus::prelude::spawn(async move {
-            let file = rfd::AsyncFileDialog::new()
-                .add_filter("Plan Files", &["json"])
-                .add_filter("All Files", &["*"])
-                .set_title("Open Plan")
-                .pick_file()
-                .await;
-
-            if let Some(file) = file {
-                if let Err(e) = load_plan_from_file(
-                    file,
-                    &mut prefs_signal,
-                    &mut state_signal,
-                    &mut viewing_signal,
-                )
-                .await
-                {
-                    eprintln!("Failed to load plan: {}", e);
-                }
-            }
-        });
-    }
-}
-
-/// Load plan from an rfd FileHandle (desktop)
-#[cfg(not(target_family = "wasm"))]
-async fn load_plan_from_file(
-    file: rfd::FileHandle,
-    prefs_signal: &mut Signal<Preferences>,
-    state_signal: &mut Signal<PlanState>,
-    viewing_signal: &mut Signal<Option<crate::state::ViewingSession>>,
-) -> Result<(), String> {
-    let filename = file.file_name();
-    let content = file.read().await;
-    let json_str = String::from_utf8(content).map_err(|e| format!("Invalid UTF-8: {}", e))?;
-
-    load_plan_from_json(
-        &json_str,
-        &filename,
-        prefs_signal,
-        state_signal,
-        viewing_signal,
-    )
 }
 
 /// Load plan from JSON string (shared logic)
@@ -709,17 +739,6 @@ fn register_keyboard_shortcuts(
     });
 }
 
-// Stub for non-wasm to avoid compilation errors
-#[cfg(not(target_family = "wasm"))]
-fn handle_file_import(
-    _file_input_id: String,
-    _preferences: Signal<Preferences>,
-    _plan_state: Signal<PlanState>,
-    _viewing_session: Signal<Option<crate::state::ViewingSession>>,
-) {
-    // Desktop uses rfd dialog instead
-}
-
 /// Handle paste from clipboard (desktop)
 #[cfg(not(target_family = "wasm"))]
 fn handle_paste_from_clipboard_desktop(
@@ -727,10 +746,12 @@ fn handle_paste_from_clipboard_desktop(
     mut plan_state: Signal<PlanState>,
     mut viewing_session: Signal<Option<crate::state::ViewingSession>>,
 ) {
+    use dioxus::logger::tracing::{error, warn};
+
     let content = match crate::plan_io::read_from_clipboard_sync() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Failed to read clipboard: {}", e);
+            error!("Failed to read clipboard: {}", e);
             return;
         }
     };
@@ -742,7 +763,7 @@ fn handle_paste_from_clipboard_desktop(
         match crate::plan_io::base64_decode_desktop(&content) {
             Ok(decoded) => decoded,
             Err(_) => {
-                eprintln!("Clipboard does not contain a valid plan");
+                warn!("Clipboard does not contain a valid plan");
                 return;
             }
         }
@@ -755,6 +776,6 @@ fn handle_paste_from_clipboard_desktop(
         &mut plan_state,
         &mut viewing_session,
     ) {
-        eprintln!("Failed to load plan: {}", e);
+        error!("Failed to load plan: {}", e);
     }
 }

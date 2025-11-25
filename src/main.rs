@@ -1,5 +1,6 @@
 // The dioxus prelude contains a ton of common items used in dioxus apps. It's a good idea to import wherever you
 // need dioxus
+use dioxus::logger::tracing::{debug, info};
 use dioxus::prelude::*;
 
 use components::layout::View;
@@ -87,6 +88,14 @@ const THEME_CSS: Asset = asset!("/assets/styling/theme.css");
 const MAIN_CSS: Asset = asset!("/assets/styling/main.css");
 
 fn main() {
+    // Initialize logging - DEBUG in dev, INFO in release
+    #[cfg(debug_assertions)]
+    dioxus::logger::init(dioxus::logger::tracing::Level::DEBUG).expect("failed to init logger");
+    #[cfg(not(debug_assertions))]
+    dioxus::logger::init(dioxus::logger::tracing::Level::INFO).expect("failed to init logger");
+
+    info!("Planner v{} starting", env!("CARGO_PKG_VERSION"));
+
     // The `launch` function is the main entry point for a dioxus app. It takes a component and renders it with the platform feature
     // you have enabled
     dioxus::launch(App);
@@ -104,13 +113,22 @@ fn App() -> Element {
     // Load preferences and plan state - from URL if present, otherwise from storage
     let (initial_prefs, initial_state, initial_viewing) =
         if let Some((prefs, state, session)) = url_plan {
+            info!(
+                "Loaded shared plan from URL: {} ({} team members, {} allocations)",
+                state.quarter_name,
+                prefs.team_members.len(),
+                state.allocations.len()
+            );
             (prefs, state, Some(session))
         } else {
-            (
-                storage::load_preferences().unwrap_or_default(),
-                storage::load_plan_state().unwrap_or_default(),
-                None,
-            )
+            let prefs = storage::load_preferences();
+            let state = storage::load_plan_state();
+
+            if prefs.is_none() && state.is_none() {
+                debug!("No saved data found, using defaults");
+            }
+
+            (prefs.unwrap_or_default(), state.unwrap_or_default(), None)
         };
 
     // Create signals for persistent data

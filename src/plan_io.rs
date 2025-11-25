@@ -3,6 +3,7 @@
 //! This module handles platform-specific file operations for saving and loading plans.
 
 use crate::models::PlanExport;
+use dioxus::logger::tracing::{debug, info};
 
 /// Trigger a file download with the plan export as JSON
 #[cfg(target_family = "wasm")]
@@ -30,6 +31,7 @@ pub fn trigger_plan_download(export: &PlanExport) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize plan: {}", e))?;
 
     let filename = generate_plan_filename(export);
+    info!("Downloading plan: {} ({} bytes)", filename, json.len());
     download_json(&json, &filename);
 
     Ok(())
@@ -43,20 +45,19 @@ pub fn trigger_plan_download(export: &PlanExport) -> Result<(), String> {
 
     let filename = generate_plan_filename(export);
 
-    dioxus::prelude::spawn(async move {
-        let file = rfd::AsyncFileDialog::new()
-            .add_filter("Plan Files", &["json"])
-            .set_file_name(&filename)
-            .set_title("Save Plan")
-            .save_file()
-            .await;
+    debug!("Opening save dialog for {}", filename);
+    let path = rfd::FileDialog::new()
+        .add_filter("Plan Files", &["json"])
+        .set_file_name(&filename)
+        .set_title("Save Plan")
+        .save_file();
 
-        if let Some(file) = file {
-            if let Err(e) = file.write(json.as_bytes()).await {
-                eprintln!("Failed to write file: {}", e);
-            }
-        }
-    });
+    if let Some(path) = path {
+        std::fs::write(&path, &json).map_err(|e| format!("Failed to write file: {}", e))?;
+        info!("Saved plan to {:?} ({} bytes)", path, json.len());
+    } else {
+        debug!("Save dialog cancelled");
+    }
 
     Ok(())
 }
@@ -94,6 +95,8 @@ pub async fn read_file_from_input(input_id: &str) -> Result<FileReadResult, Stri
     let file = files.get(0).ok_or("No file selected")?;
     let filename = file.name();
 
+    debug!("Reading file from input: {}", filename);
+
     let file_reader = web_sys::FileReader::new().map_err(|_| "Failed to create FileReader")?;
     file_reader
         .read_as_text(&file)
@@ -129,6 +132,7 @@ pub async fn read_file_from_input(input_id: &str) -> Result<FileReadResult, Stri
     // Clear the input so the same file can be selected again
     input.set_value("");
 
+    info!("Read file {} ({} bytes)", filename, content.len());
     Ok(FileReadResult { filename, content })
 }
 
@@ -152,6 +156,7 @@ pub fn copy_plan_to_clipboard(export: &PlanExport) -> Result<(), String> {
     }
 
     copy_to_clipboard(&encoded);
+    info!("Copied plan to clipboard ({} bytes encoded)", encoded.len());
     Ok(())
 }
 
@@ -169,6 +174,7 @@ pub fn copy_plan_to_clipboard(export: &PlanExport) -> Result<(), String> {
         .set_text(&encoded)
         .map_err(|e| format!("Failed to copy: {}", e))?;
 
+    info!("Copied plan to clipboard ({} bytes encoded)", encoded.len());
     Ok(())
 }
 
@@ -279,6 +285,7 @@ pub fn copy_shareable_url(export: &PlanExport) -> Result<(), String> {
     }
 
     copy_to_clipboard(&url);
+    info!("Copied shareable URL ({} chars)", url.len());
     Ok(())
 }
 
@@ -299,6 +306,7 @@ pub fn copy_shareable_url(export: &PlanExport) -> Result<(), String> {
         .set_text(&url)
         .map_err(|e| format!("Failed to copy: {}", e))?;
 
+    info!("Copied shareable URL ({} chars)", url.len());
     Ok(())
 }
 

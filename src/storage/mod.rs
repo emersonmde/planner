@@ -10,6 +10,10 @@
 //! - Native targets use file-based storage
 
 use crate::models::{PlanState, Preferences};
+#[cfg(not(target_family = "wasm"))]
+use dioxus::logger::tracing::{debug, error, info, warn};
+#[cfg(target_family = "wasm")]
+use dioxus::logger::tracing::{debug, info, warn};
 
 // ============================================================================
 // Web Implementation (localStorage) - only for WASM targets
@@ -36,6 +40,11 @@ pub fn save_preferences(prefs: &Preferences) -> Result<(), String> {
         .set_item(PREFERENCES_KEY, &json)
         .map_err(|e| format!("Failed to save to localStorage: {:?}", e))?;
 
+    debug!(
+        "Saved preferences to localStorage ({} bytes, {} team members)",
+        json.len(),
+        prefs.team_members.len()
+    );
     Ok(())
 }
 
@@ -46,7 +55,19 @@ pub fn load_preferences() -> Option<Preferences> {
     let storage = window.local_storage().ok()??;
     let json = storage.get_item(PREFERENCES_KEY).ok()??;
 
-    serde_json::from_str(&json).ok()
+    match serde_json::from_str::<Preferences>(&json) {
+        Ok(prefs) => {
+            info!(
+                "Loaded preferences from localStorage ({} team members)",
+                prefs.team_members.len()
+            );
+            Some(prefs)
+        }
+        Err(e) => {
+            warn!("Failed to parse preferences from localStorage: {}", e);
+            None
+        }
+    }
 }
 
 /// Clear preferences from localStorage
@@ -62,6 +83,7 @@ pub fn clear_preferences() -> Result<(), String> {
         .remove_item(PREFERENCES_KEY)
         .map_err(|e| format!("Failed to clear localStorage: {:?}", e))?;
 
+    info!("Cleared preferences from localStorage");
     Ok(())
 }
 
@@ -81,6 +103,11 @@ pub fn save_plan_state(state: &PlanState) -> Result<(), String> {
         .set_item(PLAN_STATE_KEY, &json)
         .map_err(|e| format!("Failed to save to localStorage: {:?}", e))?;
 
+    debug!(
+        "Saved plan state to localStorage ({} bytes, {} allocations)",
+        json.len(),
+        state.allocations.len()
+    );
     Ok(())
 }
 
@@ -91,7 +118,20 @@ pub fn load_plan_state() -> Option<PlanState> {
     let storage = window.local_storage().ok()??;
     let json = storage.get_item(PLAN_STATE_KEY).ok()??;
 
-    serde_json::from_str(&json).ok()
+    match serde_json::from_str::<PlanState>(&json) {
+        Ok(state) => {
+            info!(
+                "Loaded plan state from localStorage ({}, {} allocations)",
+                state.quarter_name,
+                state.allocations.len()
+            );
+            Some(state)
+        }
+        Err(e) => {
+            warn!("Failed to parse plan state from localStorage: {}", e);
+            None
+        }
+    }
 }
 
 /// Clear plan state from localStorage
@@ -107,6 +147,7 @@ pub fn clear_plan_state() -> Result<(), String> {
         .remove_item(PLAN_STATE_KEY)
         .map_err(|e| format!("Failed to clear localStorage: {:?}", e))?;
 
+    info!("Cleared plan state from localStorage");
     Ok(())
 }
 
@@ -147,8 +188,14 @@ pub fn save_preferences(prefs: &Preferences) -> Result<(), String> {
     let json = serde_json::to_string_pretty(prefs)
         .map_err(|e| format!("Failed to serialize preferences: {}", e))?;
 
-    std::fs::write(&path, json).map_err(|e| format!("Failed to write preferences file: {}", e))?;
+    std::fs::write(&path, &json).map_err(|e| format!("Failed to write preferences file: {}", e))?;
 
+    debug!(
+        "Saved preferences to {:?} ({} bytes, {} team members)",
+        path,
+        json.len(),
+        prefs.team_members.len()
+    );
     Ok(())
 }
 
@@ -158,11 +205,32 @@ pub fn load_preferences() -> Option<Preferences> {
     let path = get_preferences_path()?;
 
     if !path.exists() {
+        debug!("No preferences file found at {:?}", path);
         return None;
     }
 
-    let json = std::fs::read_to_string(&path).ok()?;
-    serde_json::from_str(&json).ok()
+    let json = match std::fs::read_to_string(&path) {
+        Ok(j) => j,
+        Err(e) => {
+            error!("Failed to read preferences file {:?}: {}", path, e);
+            return None;
+        }
+    };
+
+    match serde_json::from_str::<Preferences>(&json) {
+        Ok(prefs) => {
+            info!(
+                "Loaded preferences from {:?} ({} team members)",
+                path,
+                prefs.team_members.len()
+            );
+            Some(prefs)
+        }
+        Err(e) => {
+            warn!("Failed to parse preferences from {:?}: {}", path, e);
+            None
+        }
+    }
 }
 
 /// Clear preferences by removing config file
@@ -173,6 +241,9 @@ pub fn clear_preferences() -> Result<(), String> {
     if path.exists() {
         std::fs::remove_file(&path)
             .map_err(|e| format!("Failed to remove preferences file: {}", e))?;
+        info!("Cleared preferences file at {:?}", path);
+    } else {
+        debug!("No preferences file to clear at {:?}", path);
     }
 
     Ok(())
@@ -192,8 +263,14 @@ pub fn save_plan_state(state: &PlanState) -> Result<(), String> {
     let json = serde_json::to_string_pretty(state)
         .map_err(|e| format!("Failed to serialize plan state: {}", e))?;
 
-    std::fs::write(&path, json).map_err(|e| format!("Failed to write plan state file: {}", e))?;
+    std::fs::write(&path, &json).map_err(|e| format!("Failed to write plan state file: {}", e))?;
 
+    debug!(
+        "Saved plan state to {:?} ({} bytes, {} allocations)",
+        path,
+        json.len(),
+        state.allocations.len()
+    );
     Ok(())
 }
 
@@ -203,11 +280,33 @@ pub fn load_plan_state() -> Option<PlanState> {
     let path = get_plan_state_path()?;
 
     if !path.exists() {
+        debug!("No plan state file found at {:?}", path);
         return None;
     }
 
-    let json = std::fs::read_to_string(&path).ok()?;
-    serde_json::from_str(&json).ok()
+    let json = match std::fs::read_to_string(&path) {
+        Ok(j) => j,
+        Err(e) => {
+            error!("Failed to read plan state file {:?}: {}", path, e);
+            return None;
+        }
+    };
+
+    match serde_json::from_str::<PlanState>(&json) {
+        Ok(state) => {
+            info!(
+                "Loaded plan state from {:?} ({}, {} allocations)",
+                path,
+                state.quarter_name,
+                state.allocations.len()
+            );
+            Some(state)
+        }
+        Err(e) => {
+            warn!("Failed to parse plan state from {:?}: {}", path, e);
+            None
+        }
+    }
 }
 
 /// Clear plan state by removing config file
@@ -218,6 +317,9 @@ pub fn clear_plan_state() -> Result<(), String> {
     if path.exists() {
         std::fs::remove_file(&path)
             .map_err(|e| format!("Failed to remove plan state file: {}", e))?;
+        info!("Cleared plan state file at {:?}", path);
+    } else {
+        debug!("No plan state file to clear at {:?}", path);
     }
 
     Ok(())
