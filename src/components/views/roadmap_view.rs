@@ -416,15 +416,16 @@ pub fn RoadmapView() -> Element {
                         cancel_label: "Cancel".to_string(),
                         on_confirm: move |_| {
                             if let Some(id) = delete_project_id() {
-                                // Remove the roadmap project
-                                plan_state.write().roadmap_projects.retain(|p| p.id != id);
-
-                                // Unlink all technical projects
-                                for tech_project in plan_state.write().technical_projects.iter_mut() {
-                                    if tech_project.roadmap_project_id == Some(id) {
-                                        tech_project.roadmap_project_id = None;
+                                plan_state.with_mut(|p| {
+                                    // Remove the roadmap project
+                                    p.roadmap_projects.retain(|proj| proj.id != id);
+                                    // Unlink all technical projects
+                                    for tech_project in &mut p.technical_projects {
+                                        if tech_project.roadmap_project_id == Some(id) {
+                                            tech_project.roadmap_project_id = None;
+                                        }
                                     }
-                                }
+                                });
                             }
                             delete_dialog_visible.set(false);
                         },

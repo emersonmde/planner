@@ -586,15 +586,16 @@ pub fn TechnicalView() -> Element {
                         cancel_label: "Cancel".to_string(),
                         on_confirm: move |_| {
                             if let Some(id) = delete_project_id() {
-                                // Remove all allocations referencing this project
-                                plan.write().allocations.iter_mut().for_each(|alloc| {
-                                    alloc.assignments.retain(|a| a.technical_project_id != id);
+                                plan.with_mut(|p| {
+                                    // Remove all allocations referencing this project
+                                    for alloc in &mut p.allocations {
+                                        alloc.assignments.retain(|a| a.technical_project_id != id);
+                                    }
+                                    // Remove empty allocations
+                                    p.allocations.retain(|alloc| !alloc.assignments.is_empty());
+                                    // Remove the technical project
+                                    p.technical_projects.retain(|proj| proj.id != id);
                                 });
-                                // Remove empty allocations
-                                plan.write().allocations.retain(|alloc| !alloc.assignments.is_empty());
-                                // Remove the technical project
-                                plan.write().technical_projects.retain(|p| p.id != id);
-                                plan.write().mark_modified();
                             }
                             delete_dialog_visible.set(false);
                         },

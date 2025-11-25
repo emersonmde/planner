@@ -2,8 +2,6 @@
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-use crate::models::ProjectColor;
-
 /// Split allocation modal component
 #[component]
 pub fn SplitAllocationModal(
@@ -152,10 +150,6 @@ fn ProjectDropdown(selected_id: Option<Uuid>, on_select: EventHandler<Uuid>) -> 
                 {
                     let project_id = project.id;
                     let allocated = plan_data.calculate_project_allocated_weeks(&project_id);
-                    let _color = project.roadmap_project_id
-                        .and_then(|id| plan_data.get_roadmap_project(&id))
-                        .map(|rp| rp.color)
-                        .unwrap_or(ProjectColor::Blue);
 
                     rsx! {
                         option {

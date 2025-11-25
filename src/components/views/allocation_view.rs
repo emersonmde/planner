@@ -883,108 +883,92 @@ pub fn AllocationView() -> Element {
             }
 
             // Team Member Edit Modal
-            if show_team_member_modal() {
-                if let Some(member_id) = editing_member_id() {
-                    if let Some(member) = prefs_data.team_members.iter().find(|m| m.id == member_id) {
-                        {
-                            let member_name = member.name.clone();
-                            let member_role = member.role;
-                            let member_capacity = member.capacity;
-                            let member_allocated = plan_data.calculate_team_member_allocated_weeks(&member_id);
+            if let Some(member) = editing_member_id()
+                .filter(|_| show_team_member_modal())
+                .and_then(|id| prefs_data.team_members.iter().find(|m| m.id == id))
+            {
+                {
+                    let member_id = member.id;
+                    let member_name = member.name.clone();
+                    let member_role = member.role;
+                    let member_capacity = member.capacity;
+                    let member_allocated = plan_data.calculate_team_member_allocated_weeks(&member_id);
 
-                            rsx! {
-                                TeamMemberModal {
-                                    mode: TeamMemberModalMode::Edit(member_id),
-                                    initial_name: member_name,
-                                    initial_role: member_role,
-                                    initial_capacity: member_capacity,
-                                    default_capacity: prefs_data.default_capacity,
-                                    allocated_weeks: member_allocated,
-                                    on_save: move |updated_member: TeamMember| {
-                                        preferences.with_mut(|p| {
-                                            if let Some(existing) = p.team_members.iter_mut().find(|m| m.id == member_id) {
-                                                existing.name = updated_member.name;
-                                                existing.role = updated_member.role;
-                                                existing.capacity = updated_member.capacity;
-                                            }
-                                        });
-                                        show_team_member_modal.set(false);
-                                        editing_member_id.set(None);
-                                    },
-                                    on_cancel: move |_| {
-                                        show_team_member_modal.set(false);
-                                        editing_member_id.set(None);
-                                    },
-                                }
-                            }
+                    rsx! {
+                        TeamMemberModal {
+                            mode: TeamMemberModalMode::Edit(member_id),
+                            initial_name: member_name,
+                            initial_role: member_role,
+                            initial_capacity: member_capacity,
+                            default_capacity: prefs_data.default_capacity,
+                            allocated_weeks: member_allocated,
+                            on_save: move |updated_member: TeamMember| {
+                                preferences.with_mut(|p| {
+                                    if let Some(existing) = p.team_members.iter_mut().find(|m| m.id == member_id) {
+                                        existing.name = updated_member.name;
+                                        existing.role = updated_member.role;
+                                        existing.capacity = updated_member.capacity;
+                                    }
+                                });
+                                show_team_member_modal.set(false);
+                                editing_member_id.set(None);
+                            },
+                            on_cancel: move |_| {
+                                show_team_member_modal.set(false);
+                                editing_member_id.set(None);
+                            },
                         }
                     }
                 }
             }
 
             // Delete Team Member Confirmation Dialog
-            if show_delete_confirmation() {
-                if let Some(member_id) = deleting_member_id() {
-                    if let Some(member) = prefs_data.team_members.iter().find(|m| m.id == member_id) {
-                        {
-                            let member_name = member.name.clone();
-                            let member_allocated = plan_data.calculate_team_member_allocated_weeks(&member_id);
+            if let Some(member) = deleting_member_id()
+                .filter(|_| show_delete_confirmation())
+                .and_then(|id| prefs_data.team_members.iter().find(|m| m.id == id))
+            {
+                {
+                    let member_id = member.id;
+                    let member_name = member.name.clone();
+                    let member_allocated = plan_data.calculate_team_member_allocated_weeks(&member_id);
 
-                            // Get list of projects assigned to this member
-                            let assigned_projects: Vec<String> = plan_data.allocations
-                                .iter()
-                                .filter(|a| a.team_member_id == member_id)
-                                .flat_map(|a| &a.assignments)
-                                .filter_map(|assignment| {
-                                    plan_data.technical_projects
-                                        .iter()
-                                        .find(|p| p.id == assignment.technical_project_id)
-                                        .map(|p| p.name.clone())
-                                })
-                                .collect::<std::collections::HashSet<_>>()
-                                .into_iter()
-                                .collect();
+                    // Build warning text with affected projects
+                    let warning_text = if member_allocated > 0.0 {
+                        let project_names: Vec<_> = plan_data
+                            .get_assigned_project_names_for_member(&member_id);
+                        format!(
+                            "This will remove {:.1} weeks of allocations across {} project(s): {}",
+                            member_allocated,
+                            project_names.len(),
+                            if project_names.is_empty() { "none".to_string() } else { project_names.join(", ") }
+                        )
+                    } else {
+                        String::new()
+                    };
 
-                            let warning_text = if member_allocated > 0.0 {
-                                format!(
-                                    "This will remove {:.1} weeks of allocations across {} project(s): {}",
-                                    member_allocated,
-                                    assigned_projects.len(),
-                                    if assigned_projects.is_empty() {
-                                        "none".to_string()
-                                    } else {
-                                        assigned_projects.join(", ")
-                                    }
-                                )
-                            } else {
-                                String::new()
-                            };
-
-                            rsx! {
-                                ConfirmationDialog {
-                                    visible: true,
-                                    title: "Delete Team Member".to_string(),
-                                    message: format!("Are you sure you want to delete {}?", member_name),
-                                    warning: warning_text,
-                                    confirm_label: "Delete".to_string(),
-                                    on_confirm: move |_| {
-                                        // Cascade delete: remove all allocations for this member
-                                        plan_state.with_mut(|p| {
-                                            p.allocations.retain(|a| a.team_member_id != member_id);
-                                        });
-                                        // Remove team member from preferences
-                                        preferences.with_mut(|p| {
-                                            p.team_members.retain(|m| m.id != member_id);
-                                        });
-                                        show_delete_confirmation.set(false);
-                                        deleting_member_id.set(None);
-                                    },
-                                    on_cancel: move |_| {
-                                        show_delete_confirmation.set(false);
-                                        deleting_member_id.set(None);
-                                    },
-                                }
-                            }
+                    rsx! {
+                        ConfirmationDialog {
+                            visible: true,
+                            title: "Delete Team Member".to_string(),
+                            message: format!("Are you sure you want to delete {}?", member_name),
+                            warning: warning_text,
+                            confirm_label: "Delete".to_string(),
+                            on_confirm: move |_| {
+                                // Cascade delete: remove all allocations for this member
+                                plan_state.with_mut(|p| {
+                                    p.allocations.retain(|a| a.team_member_id != member_id);
+                                });
+                                // Remove team member from preferences
+                                preferences.with_mut(|p| {
+                                    p.team_members.retain(|m| m.id != member_id);
+                                });
+                                show_delete_confirmation.set(false);
+                                deleting_member_id.set(None);
+                            },
+                            on_cancel: move |_| {
+                                show_delete_confirmation.set(false);
+                                deleting_member_id.set(None);
+                            },
                         }
                     }
                 }

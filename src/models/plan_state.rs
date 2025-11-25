@@ -195,6 +195,25 @@ impl PlanState {
             .sum()
     }
 
+    /// Get unique project names assigned to a team member
+    pub fn get_assigned_project_names_for_member(&self, team_member_id: &Uuid) -> Vec<String> {
+        use std::collections::HashSet;
+
+        self.allocations
+            .iter()
+            .filter(|a| &a.team_member_id == team_member_id)
+            .flat_map(|a| &a.assignments)
+            .filter_map(|assignment| {
+                self.technical_projects
+                    .iter()
+                    .find(|p| p.id == assignment.technical_project_id)
+                    .map(|p| p.name.clone())
+            })
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect()
+    }
+
     /// Calculate allocated weeks for a roadmap project (sum of all linked technical projects)
     /// Returns (eng_allocated, sci_allocated, total_allocated)
     /// Note: Requires team member data from Preferences to determine role
