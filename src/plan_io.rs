@@ -35,7 +35,7 @@ pub fn trigger_plan_download(export: &PlanExport) -> Result<(), String> {
     Ok(())
 }
 
-/// Desktop/native implementation of plan download
+/// Desktop/native implementation of plan download using save dialog
 #[cfg(not(target_family = "wasm"))]
 pub fn trigger_plan_download(export: &PlanExport) -> Result<(), String> {
     let json = serde_json::to_string_pretty(export)
@@ -43,13 +43,20 @@ pub fn trigger_plan_download(export: &PlanExport) -> Result<(), String> {
 
     let filename = generate_plan_filename(export);
 
-    if let Some(download_dir) = dirs::download_dir() {
-        let path = download_dir.join(&filename);
-        std::fs::write(&path, &json).map_err(|e| format!("Failed to write file: {}", e))?;
-        eprintln!("Saved plan to: {:?}", path);
-    } else {
-        return Err("Could not find Downloads folder".to_string());
-    }
+    dioxus::prelude::spawn(async move {
+        let file = rfd::AsyncFileDialog::new()
+            .add_filter("Plan Files", &["json"])
+            .set_file_name(&filename)
+            .set_title("Save Plan")
+            .save_file()
+            .await;
+
+        if let Some(file) = file {
+            if let Err(e) = file.write(json.as_bytes()).await {
+                eprintln!("Failed to write file: {}", e);
+            }
+        }
+    });
 
     Ok(())
 }
@@ -148,11 +155,42 @@ pub fn copy_plan_to_clipboard(export: &PlanExport) -> Result<(), String> {
     Ok(())
 }
 
-/// Copy plan to clipboard (desktop stub)
+/// Copy plan to clipboard (desktop - using arboard)
 #[cfg(not(target_family = "wasm"))]
-pub fn copy_plan_to_clipboard(_export: &PlanExport) -> Result<(), String> {
-    eprintln!("Clipboard not supported on desktop yet");
+pub fn copy_plan_to_clipboard(export: &PlanExport) -> Result<(), String> {
+    use base64::Engine;
+
+    let json = serde_json::to_string(export).map_err(|e| format!("Failed to serialize: {}", e))?;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&json);
+
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
+    clipboard
+        .set_text(&encoded)
+        .map_err(|e| format!("Failed to copy: {}", e))?;
+
     Ok(())
+}
+
+/// Read from clipboard and decode (desktop)
+#[cfg(not(target_family = "wasm"))]
+pub fn read_from_clipboard_sync() -> Result<String, String> {
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
+    clipboard
+        .get_text()
+        .map_err(|e| format!("Failed to read clipboard: {}", e))
+}
+
+/// Base64 decode for desktop
+#[cfg(not(target_family = "wasm"))]
+pub fn base64_decode_desktop(input: &str) -> Result<String, String> {
+    use base64::Engine;
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(input)
+        .map_err(|_| "Invalid base64")?;
+    String::from_utf8(bytes).map_err(|_| "Invalid UTF-8".to_string())
 }
 
 /// Read text from clipboard
@@ -210,4 +248,81 @@ pub fn base64_decode(input: &str) -> Result<String, String> {
     }
 
     atob_safe(input).ok_or_else(|| "Invalid base64".to_string())
+}
+
+/// Copy a shareable URL to clipboard (includes base64-encoded plan)
+#[cfg(target_family = "wasm")]
+pub fn copy_shareable_url(export: &PlanExport) -> Result<(), String> {
+    use wasm_bindgen::prelude::*;
+
+    let json = serde_json::to_string(export).map_err(|e| format!("Failed to serialize: {}", e))?;
+    let encoded = base64_encode(&json);
+
+    // Get current URL and append ?plan= parameter
+    let window = web_sys::window().ok_or("No window")?;
+    let location = window.location();
+    let href = location.href().map_err(|_| "No href")?;
+
+    // Remove any existing query string and add our plan param
+    let base_url = href.split('?').next().unwrap_or(&href);
+    let url = format!("{}?plan={}", base_url, encoded);
+
+    #[wasm_bindgen(inline_js = r#"
+        export function copy_to_clipboard(text) {
+            navigator.clipboard.writeText(text).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    "#)]
+    extern "C" {
+        fn copy_to_clipboard(text: &str);
+    }
+
+    copy_to_clipboard(&url);
+    Ok(())
+}
+
+/// Copy shareable URL (desktop - always uses GH pages URL)
+#[cfg(not(target_family = "wasm"))]
+pub fn copy_shareable_url(export: &PlanExport) -> Result<(), String> {
+    use base64::Engine;
+
+    let json = serde_json::to_string(export).map_err(|e| format!("Failed to serialize: {}", e))?;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&json);
+
+    // Always link to GitHub Pages deployment
+    let url = format!("https://errorsignal.dev/planner/?plan={}", encoded);
+
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| format!("Failed to access clipboard: {}", e))?;
+    clipboard
+        .set_text(&url)
+        .map_err(|e| format!("Failed to copy: {}", e))?;
+
+    Ok(())
+}
+
+/// Clear the plan parameter from the URL (used when closing a shared plan)
+#[cfg(target_family = "wasm")]
+pub fn clear_url_plan_param() {
+    use wasm_bindgen::prelude::*;
+
+    #[wasm_bindgen(inline_js = r#"
+        export function clear_plan_param() {
+            const url = new URL(window.location);
+            url.searchParams.delete('plan');
+            window.history.replaceState({}, '', url);
+        }
+    "#)]
+    extern "C" {
+        fn clear_plan_param();
+    }
+
+    clear_plan_param();
+}
+
+/// Clear URL plan param (desktop stub)
+#[cfg(not(target_family = "wasm"))]
+pub fn clear_url_plan_param() {
+    // No-op on desktop
 }

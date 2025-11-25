@@ -15,6 +15,70 @@ mod state;
 mod storage;
 mod utils;
 
+/// Check URL for plan data query parameter (?plan=<base64>)
+/// Returns (preferences, plan_state, viewing_session) if found and valid
+#[cfg(target_family = "wasm")]
+fn load_plan_from_url() -> Option<(
+    models::Preferences,
+    models::PlanState,
+    state::ViewingSession,
+)> {
+    let window = web_sys::window()?;
+    let location = window.location();
+    let search = location.search().ok()?;
+
+    // Parse query string for "plan" parameter
+    if search.is_empty() {
+        return None;
+    }
+
+    // Simple query string parsing (format: ?plan=<base64>)
+    let params: Vec<&str> = search.trim_start_matches('?').split('&').collect();
+    let plan_param = params.iter().find(|p| p.starts_with("plan="))?;
+
+    let encoded = plan_param.strip_prefix("plan=")?;
+    if encoded.is_empty() {
+        return None;
+    }
+
+    // URL decode the base64 (in case of + becoming spaces, etc.)
+    let decoded_param = js_sys::decode_uri_component(encoded).ok()?;
+    let encoded_str = decoded_param.as_string()?;
+
+    // Decode base64
+    let json = plan_io::base64_decode(&encoded_str).ok()?;
+
+    // Parse JSON
+    let export: PlanExport = serde_json::from_str(&json).ok()?;
+
+    // Validate
+    if export.validate().is_err() {
+        return None;
+    }
+
+    let original_json = serde_json::to_string(&export).unwrap_or_default();
+    let (prefs, plan) = export.into_signals();
+
+    Some((
+        prefs,
+        plan,
+        state::ViewingSession {
+            filename: "Shared Plan".to_string(),
+            original_json,
+            modified: false,
+        },
+    ))
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn load_plan_from_url() -> Option<(
+    models::Preferences,
+    models::PlanState,
+    state::ViewingSession,
+)> {
+    None // URL parameters not supported on desktop
+}
+
 // We can import assets in dioxus with the `asset!` macro. This macro takes a path to an asset relative to the crate root.
 // The macro returns an `Asset` type that will display as the path to the asset in the browser or a local path in desktop bundles.
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -34,17 +98,28 @@ fn main() {
 /// Components should be annotated with `#[component]` to support props, better error messages, and autocomplete
 #[component]
 fn App() -> Element {
-    // Load preferences and plan state from storage, falling back to smart defaults
-    let initial_prefs = storage::load_preferences().unwrap_or_default();
-    let initial_state = storage::load_plan_state().unwrap_or_default();
+    // Check for plan in URL first (takes priority over localStorage)
+    let url_plan = load_plan_from_url();
 
-    // Create two independent signals for persistent data
+    // Load preferences and plan state - from URL if present, otherwise from storage
+    let (initial_prefs, initial_state, initial_viewing) =
+        if let Some((prefs, state, session)) = url_plan {
+            (prefs, state, Some(session))
+        } else {
+            (
+                storage::load_preferences().unwrap_or_default(),
+                storage::load_plan_state().unwrap_or_default(),
+                None,
+            )
+        };
+
+    // Create signals for persistent data
     let preferences = use_signal(|| initial_prefs);
     let plan_state = use_signal(|| initial_state);
 
     // Viewing session signal for imported plan files (ephemeral, not persisted)
     // When Some, the app is displaying a loaded file instead of the localStorage plan
-    let mut viewing_session: Signal<Option<state::ViewingSession>> = use_signal(|| None);
+    let mut viewing_session: Signal<Option<state::ViewingSession>> = use_signal(|| initial_viewing);
 
     // Auto-save preferences to localStorage when they change
     // IMPORTANT: Skip saving when in viewing mode (viewing an imported file)

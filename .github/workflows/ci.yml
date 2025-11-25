@@ -26,9 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests
-        run: cargo test --verbose
+      # Run tests for web target only - desktop tests run locally via pre-commit hook
+      # Using --lib to avoid compiling desktop binary which needs native GUI libs
+      - name: Run tests (web)
+        run: cargo test --verbose --features web --lib
 
   fmt:
     name: Rustfmt

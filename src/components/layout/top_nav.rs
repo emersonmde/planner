@@ -243,6 +243,8 @@ fn ViewingModeMenu(
                 let _ = storage::save_preferences(&preferences());
                 let _ = storage::save_plan_state(&plan_state());
                 viewing_session.set(None);
+                // Clear URL since user now owns this plan
+                crate::plan_io::clear_url_plan_param();
             },
         }
 
@@ -329,6 +331,17 @@ fn NormalModeMenu(
             },
         }
 
+        // Copy Link (shareable URL)
+        MenuItem {
+            icon: "🔗",
+            label: "Copy Link",
+            onclick: move |_| {
+                show_plan_menu.set(false);
+                let export = PlanExport::from_signals(preferences(), plan_state());
+                let _ = crate::plan_io::copy_shareable_url(&export);
+            },
+        }
+
         // Paste from Clipboard
         MenuItem {
             icon: "📥",
@@ -337,6 +350,8 @@ fn NormalModeMenu(
                 show_plan_menu.set(false);
                 #[cfg(target_family = "wasm")]
                 handle_paste_from_clipboard(preferences, plan_state, viewing_session);
+                #[cfg(not(target_family = "wasm"))]
+                handle_paste_from_clipboard_desktop(preferences, plan_state, viewing_session);
             },
         }
     }
@@ -477,6 +492,8 @@ fn restore_from_local_storage(
     preferences.set(restored_prefs);
     plan_state.set(restored_state);
     viewing_session.set(None);
+    // Clear ?plan= from URL so refresh doesn't reload the shared plan
+    crate::plan_io::clear_url_plan_param();
 }
 
 /// Trigger file open dialog
@@ -701,4 +718,43 @@ fn handle_file_import(
     _viewing_session: Signal<Option<crate::state::ViewingSession>>,
 ) {
     // Desktop uses rfd dialog instead
+}
+
+/// Handle paste from clipboard (desktop)
+#[cfg(not(target_family = "wasm"))]
+fn handle_paste_from_clipboard_desktop(
+    mut preferences: Signal<Preferences>,
+    mut plan_state: Signal<PlanState>,
+    mut viewing_session: Signal<Option<crate::state::ViewingSession>>,
+) {
+    let content = match crate::plan_io::read_from_clipboard_sync() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to read clipboard: {}", e);
+            return;
+        }
+    };
+
+    // Try to decode as base64, fall back to raw JSON
+    let json = if content.starts_with('{') {
+        content
+    } else {
+        match crate::plan_io::base64_decode_desktop(&content) {
+            Ok(decoded) => decoded,
+            Err(_) => {
+                eprintln!("Clipboard does not contain a valid plan");
+                return;
+            }
+        }
+    };
+
+    if let Err(e) = load_plan_from_json(
+        &json,
+        "Pasted Plan",
+        &mut preferences,
+        &mut plan_state,
+        &mut viewing_session,
+    ) {
+        eprintln!("Failed to load plan: {}", e);
+    }
 }
