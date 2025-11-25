@@ -15,10 +15,25 @@ uuid = { version = "1.0", features = ["v4", "serde", "js"] }
 wasm-bindgen = "0.2"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-web-sys = { version = "0.3", features = ["Window", "Storage"] }
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Storage",
+    "Document",
+    "Element",
+    "HtmlInputElement",
+    "FileList",
+    "File",
+    "FileReader",
+    "console",
+    "Navigator",
+    "Clipboard"
+] }
+js-sys = "0.3"
+wasm-bindgen-futures = "0.4"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 dirs = "6.0"
+rfd = "0.15"
 
 [features]
 default = ["web"]

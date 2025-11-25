@@ -4,10 +4,10 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 
 ## Progress Status
 
-**Current Status:** Milestone 12.5 Complete (Settings & Configuration)
+**Current Status:** Milestone 13 Complete (Plan Import/Export)
 
-- ✅ Milestones 1-12.5 Complete (see summary below)
-- 📋 **Milestones 13-17**: Planned for v1.0
+- ✅ Milestones 1-13 Complete (see summary below)
+- 📋 **Milestones 14-17**: Planned for v1.0
 
 **Build Status:** ✅ Compiles successfully
 
@@ -126,6 +126,23 @@ Before marking any milestone as complete, the following steps must be completed:
 - Delete with cascade behavior (removes all allocations for that member)
 - Capacity validation with warning when reducing below allocated weeks
 - Changes persist to localStorage via preferences signal
+
+### M12.5: Settings & Configuration ✅
+- Settings modal with plan configuration (name, start date, weeks)
+- Sprint configuration (anchor date, length)
+- Storage management (load sample data, clear preferences)
+- Settings accessible via hamburger menu in TopNav
+
+### M13: Plan Import/Export ✅
+- **Important**: "Plan Title as Menu" pattern (like Notion/Linear) replaces static quarter display
+- Plan Menu dropdown: Open Plan, Save Plan, Copy/Paste to clipboard
+- Viewing mode: Visual indicator when viewing imported plan (file icon + filename)
+- Unsaved changes indicator (orange dot) when modifying loaded plan
+- Close button to return to localStorage plan
+- Settings gear icon replaces hamburger menu
+- "+ Add" button moved to grid corner cell
+- Keyboard shortcuts: Cmd+O (Open), Cmd+S (Save)
+- Self-contained PlanExport format includes team snapshot for portability
 
 ---
 
@@ -294,7 +311,7 @@ preferences.write().team_members.push(new_member);
 ## Milestone 13: Plan Import/Export
 **Goal:** Enable users to save, load, and share self-contained quarterly plans
 
-**Status:** 📋 Not Started
+**Status:** ✅ Complete
 **Estimated Effort:** 2-3 days
 
 ### Context

@@ -641,7 +641,15 @@ pub fn AllocationView() -> Element {
                         div { class: "empty-state-icon", "👥" }
                         h3 { class: "empty-state-title", "No Team Members" }
                         p { class: "empty-state-description",
-                            "Add team members using the \"+Add Member\" button to start planning allocations."
+                            "Add team members to start planning allocations."
+                        }
+                        button {
+                            class: "btn btn-primary",
+                            onclick: move |_| {
+                                editing_member_id.set(None);
+                                show_team_member_modal.set(true);
+                            },
+                            "+ Add Team Member"
                         }
                     }
                 }
@@ -650,8 +658,18 @@ pub fn AllocationView() -> Element {
                     class: if has_team_members { "allocation-grid" } else { "allocation-grid hidden" },
                     style: "grid-template-columns: {grid_template_columns()};",
 
-                    // Top-left corner cell
-                    div { class: "grid-header-corner" }
+                    // Top-left corner cell with + Add button (M13)
+                    div { class: "grid-header-corner",
+                        button {
+                            class: "add-member-btn",
+                            title: "Add team member",
+                            onclick: move |_| {
+                                editing_member_id.set(None);
+                                show_team_member_modal.set(true);
+                            },
+                            "+ Add"
+                        }
+                    }
 
                     // Column headers (engineers)
                     for engineer in &prefs_data.team_members {
@@ -940,6 +958,27 @@ pub fn AllocationView() -> Element {
                             },
                         }
                     }
+                }
+            }
+
+            // Team Member Add Modal (M13 - from grid corner cell)
+            if show_team_member_modal() && editing_member_id().is_none() {
+                TeamMemberModal {
+                    mode: TeamMemberModalMode::Add,
+                    initial_name: String::new(),
+                    initial_role: crate::models::Role::Engineering,
+                    initial_capacity: 0.0,
+                    default_capacity: prefs_data.default_capacity,
+                    allocated_weeks: 0.0,
+                    on_save: move |new_member: TeamMember| {
+                        preferences.with_mut(|p| {
+                            p.team_members.push(new_member);
+                        });
+                        show_team_member_modal.set(false);
+                    },
+                    on_cancel: move |_| {
+                        show_team_member_modal.set(false);
+                    },
                 }
             }
 

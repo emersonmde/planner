@@ -7,7 +7,14 @@
 //! - `preferences`: Team roster, sprint config (persisted to localStorage)
 //! - `plan_state`: Projects, allocations (exported/imported per quarter)
 //!
-//! See ADR-004 for design rationale.
+//! ## Viewing Mode (Milestone 13)
+//!
+//! When viewing an imported plan file:
+//! - `viewing_session`: Tracks the loaded file and modification state
+//! - Auto-save is disabled (localStorage untouched)
+//! - On close, reload from localStorage to restore user's own plan
+//!
+//! See ADR-005 for design rationale.
 
 use chrono::NaiveDate;
 use dioxus::prelude::*;
@@ -15,15 +22,35 @@ use dioxus::prelude::*;
 use crate::models::*;
 use crate::utils::get_quarter_start_date;
 
-/// Global application context with two independent signals
+/// State for viewing an imported/loaded plan file
+///
+/// When viewing a file, the plan data is loaded into the main signals
+/// but NOT persisted to localStorage. The original localStorage data
+/// is preserved and can be restored by closing the viewing session.
+#[derive(Clone, PartialEq)]
+pub struct ViewingSession {
+    /// Filename of the loaded plan (for display in UI)
+    pub filename: String,
+
+    /// Original export data (for detecting modifications)
+    /// Stored as JSON string for easy comparison
+    pub original_json: String,
+
+    /// Whether the user has made changes to the loaded plan
+    pub modified: bool,
+}
+
+/// Global application context with two independent signals + viewing mode
 ///
 /// This replaces the old single `Signal<Plan>` with two signals:
 /// - `preferences`: Long-term team configuration
 /// - `plan_state`: Quarter-specific planning data
+/// - `viewing_session`: Optional viewing state for imported plans
 #[derive(Clone, Copy)]
 pub struct AppContext {
     pub preferences: Signal<Preferences>,
     pub plan_state: Signal<PlanState>,
+    pub viewing_session: Signal<Option<ViewingSession>>,
 }
 
 /// Hook to access team preferences (persisted to localStorage)
@@ -47,6 +74,17 @@ pub fn use_preferences() -> Signal<Preferences> {
 /// - Metadata (version, timestamps)
 pub fn use_plan_state() -> Signal<PlanState> {
     use_context::<AppContext>().plan_state
+}
+
+/// Hook to access viewing session (for imported plan files)
+///
+/// Returns `None` when working on local plan, `Some(ViewingSession)` when
+/// viewing an imported file. Use this to:
+/// - Show/hide viewing mode UI indicators
+/// - Disable auto-save when viewing
+/// - Track modifications to loaded plans
+pub fn use_viewing_session() -> Signal<Option<ViewingSession>> {
+    use_context::<AppContext>().viewing_session
 }
 
 /// Initialize the application state with sample data

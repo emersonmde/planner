@@ -3,14 +3,14 @@
 use dioxus::prelude::*;
 
 use components::layout::View;
-use components::ui::{TeamMemberModal, TeamMemberModalMode};
 use components::{AllocationView, RoadmapView, TechnicalView, TopNav};
-use models::Role;
+use models::PlanExport;
 use state::AppContext;
 
 /// Define a components module that contains all shared components for our app.
 mod components;
 mod models;
+mod plan_io;
 mod state;
 mod storage;
 mod utils;
@@ -38,54 +38,69 @@ fn App() -> Element {
     let initial_prefs = storage::load_preferences().unwrap_or_default();
     let initial_state = storage::load_plan_state().unwrap_or_default();
 
-    // Create two independent signals
-    let mut preferences = use_signal(|| initial_prefs);
+    // Create two independent signals for persistent data
+    let preferences = use_signal(|| initial_prefs);
     let plan_state = use_signal(|| initial_state);
 
+    // Viewing session signal for imported plan files (ephemeral, not persisted)
+    // When Some, the app is displaying a loaded file instead of the localStorage plan
+    let mut viewing_session: Signal<Option<state::ViewingSession>> = use_signal(|| None);
+
     // Auto-save preferences to localStorage when they change
+    // IMPORTANT: Skip saving when in viewing mode (viewing an imported file)
     use_effect(move || {
         let prefs = preferences();
-        let _ = storage::save_preferences(&prefs);
+        // Only save if NOT in viewing mode
+        if viewing_session().is_none() {
+            let _ = storage::save_preferences(&prefs);
+        }
     });
 
     // Auto-save plan state to localStorage when it changes
+    // IMPORTANT: Skip saving when in viewing mode (viewing an imported file)
     use_effect(move || {
         let state = plan_state();
-        let _ = storage::save_plan_state(&state);
+        // Only save if NOT in viewing mode
+        if viewing_session().is_none() {
+            let _ = storage::save_plan_state(&state);
+        }
     });
 
-    // Provide the app context with two signals to all child components
+    // Detect unsaved changes when in viewing mode
+    // Compare current state with original JSON to set the modified flag
+    use_effect(move || {
+        let prefs = preferences();
+        let state = plan_state();
+
+        // Only check if in viewing mode
+        if let Some(session) = viewing_session() {
+            // Create export from current state and serialize
+            let current_export = PlanExport::from_signals(prefs, state);
+            let current_json = serde_json::to_string(&current_export).unwrap_or_default();
+
+            // Compare with original - update modified flag if different
+            let is_modified = current_json != session.original_json;
+
+            // Only update if the modified state changed
+            if is_modified != session.modified {
+                viewing_session.set(Some(state::ViewingSession {
+                    filename: session.filename.clone(),
+                    original_json: session.original_json.clone(),
+                    modified: is_modified,
+                }));
+            }
+        }
+    });
+
+    // Provide the app context with all signals to child components
     use_context_provider(|| AppContext {
         preferences,
         plan_state,
+        viewing_session,
     });
 
     // Active view state
     let active_view = use_signal(|| View::Allocation);
-
-    // Team member modal state
-    let mut show_team_member_modal = use_signal(|| false);
-
-    // Handle adding new team member
-    let handle_add_team_member = move |_| {
-        show_team_member_modal.set(true);
-    };
-
-    // Handle save team member
-    let handle_save_team_member = move |member: models::TeamMember| {
-        preferences.with_mut(|p| {
-            p.team_members.push(member);
-        });
-        show_team_member_modal.set(false);
-    };
-
-    // Handle cancel team member modal
-    let handle_cancel_team_member = move |_| {
-        show_team_member_modal.set(false);
-    };
-
-    // Get default capacity for new members
-    let default_capacity = preferences().default_capacity;
 
     rsx! {
         // Critical CSS to prevent white flash on load
@@ -96,10 +111,8 @@ fn App() -> Element {
 
         div { class: "app-container",
             // Top navigation bar
-            TopNav {
-                active_view,
-                on_add_team_member: handle_add_team_member,
-            }
+            // Note: + Add Member button moved to grid corner cell in M13
+            TopNav { active_view }
 
             // Main content area
             main { class: "main-content",
@@ -108,20 +121,6 @@ fn App() -> Element {
                     View::Roadmap => rsx! { RoadmapView {} },
                     View::Technical => rsx! { TechnicalView {} },
                     View::Allocation => rsx! { AllocationView {} },
-                }
-            }
-
-            // Team member modal (Add mode from TopNav)
-            if show_team_member_modal() {
-                TeamMemberModal {
-                    mode: TeamMemberModalMode::Add,
-                    initial_name: String::new(),
-                    initial_role: Role::Engineering,
-                    initial_capacity: 0.0,
-                    default_capacity,
-                    allocated_weeks: 0.0,
-                    on_save: handle_save_team_member,
-                    on_cancel: handle_cancel_team_member,
                 }
             }
         }
