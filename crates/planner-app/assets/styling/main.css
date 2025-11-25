@@ -2823,6 +2823,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ========== Empty State ========== */
+.empty-state,
 .allocation-grid-empty {
   display: flex;
   flex-direction: column;
@@ -2850,7 +2851,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .empty-state-description {
   font-size: var(--font-size-body);
   color: var(--text-secondary);
-  margin: 0;
+  margin: 0 0 var(--space-lg) 0;
   max-width: 400px;
   line-height: 1.5;
 }

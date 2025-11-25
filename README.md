@@ -7,43 +7,40 @@ A quarterly planning tool for engineering managers, built with Rust and Dioxus 0
 Quarterly Planner helps engineering managers plan and visualize team member allocation across a quarter. It provides three coordinated views:
 
 - **Roadmap View**: High-level product initiatives with engineering/science estimates
-- **Technical View**: Detailed implementation projects with status tracking and filtering
+- **Technical View**: Detailed implementation projects linked to roadmap items
 - **Allocation Grid**: Interactive weekly allocation matrix with paintbrush mode
 
-### Current Features
+## Features
 
+### Core Functionality
 - Interactive allocation grid with paintbrush mode for rapid weekly planning
-- Context menu and keyboard shortcuts (copy/paste, split allocation)
+- Context menu and keyboard shortcuts (Cmd+C/V copy/paste, Delete, `?` for help)
+- Split allocation support (assign multiple projects to same week)
 - Real-time capacity tracking and utilization calculations
 - Auto-updating project dates based on allocations
 - Hover tooltips with project and capacity details
-- Full CRUD operations for roadmap projects with modal-based editing
+
+### Data Management
+- Full CRUD operations for roadmap projects, technical projects, and team members
 - Color-coded projects with 9-color palette
 - Sprint boundary visualization
+- Settings modal for plan and sprint configuration
+
+### Import/Export
+- Plan Menu (Notion/Linear-style) for file operations
+- Open/Save plans as JSON files (Cmd+O, Cmd+S)
+- Copy/Paste plans to clipboard for easy sharing
+- Self-contained exports include team snapshot for portability
+- Viewing mode indicator when viewing imported plans
+- Unsaved changes detection (orange dot indicator)
+
+### Architecture
 - Two-signal reactive architecture (preferences + plan state)
-- localStorage persistence for team configuration
+- localStorage persistence for team configuration and plan state
+- Cargo workspace with separate core library (testable on any platform)
+- 45 unit tests covering models, utilities, and business logic
 
-## Architecture
-
-**Tech Stack:**
-- Rust (stable)
-- Dioxus 0.7 (reactive UI framework)
-- WebAssembly (primary target)
-- Desktop support via Dioxus desktop feature
-
-**State Management:**
-- Two independent signals: `use_preferences()` and `use_plan_state()`
-- Preferences (team roster, sprint config) persist to localStorage
-- Plan state (projects, allocations) designed for export/import
-- See [docs/adrs/ADR-004-state-persistence.md](docs/adrs/ADR-004-state-persistence.md)
-
-**Design System:**
-- Dark-mode-first CSS design tokens
-- 8px spacing system
-- Apple-inspired color palette
-- See [docs/ui-design.md](docs/ui-design.md)
-
-## Development
+## Quick Start
 
 ### Prerequisites
 
@@ -54,9 +51,6 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Install Dioxus CLI
 cargo install dioxus-cli --locked
 
-# Install cargo-audit (for pre-commit hook)
-cargo install cargo-audit --locked
-
 # Add WASM target
 rustup target add wasm32-unknown-unknown
 ```
@@ -65,13 +59,39 @@ rustup target add wasm32-unknown-unknown
 
 ```bash
 # Web (hot reload enabled)
-dx serve
+dx serve -p planner-app
 
-# Desktop
-dx serve --platform desktop
+# Desktop (macOS)
+dx serve -p planner-app --platform desktop
 
 # Production build
-dx build --release
+dx build -p planner-app --release
+```
+
+## Development
+
+### Project Structure
+
+```
+planner/
+├── Cargo.toml              # Workspace root
+├── Dioxus.toml             # Dioxus configuration
+├── crates/
+│   ├── planner-core/       # Platform-independent models & utils
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── models/     # Data structures (Plan, Projects, Allocations)
+│   │       └── utils/      # Date helpers, capacity calculations
+│   └── planner-app/        # Dioxus UI application
+│       ├── assets/         # CSS files (theme.css, main.css)
+│       └── src/
+│           ├── main.rs
+│           ├── components/ # UI components (layout, views, ui primitives)
+│           ├── state.rs    # App state management
+│           ├── storage.rs  # localStorage persistence
+│           └── plan_io.rs  # Platform-specific file I/O
+├── docs/                   # Documentation
+└── .github/workflows/      # CI configuration
 ```
 
 ### Code Quality
@@ -80,54 +100,38 @@ dx build --release
 # Format code
 cargo fmt
 
-# Run clippy (web target)
-cargo clippy --target wasm32-unknown-unknown --features web -- -D warnings
+# Run clippy
+cargo clippy -p planner-core
+cargo clippy -p planner-app --target wasm32-unknown-unknown --features web
 
-# Run clippy (desktop target)
-cargo clippy --features desktop --all-targets -- -D warnings
-
-# Run tests
-cargo test --verbose --features desktop
-
-# Security audit
-cargo audit
+# Run tests (core library only - no platform deps)
+cargo test -p planner-core
 
 # All checks (via pre-commit hook)
 .githooks/pre-commit
 ```
 
-### Project Structure
+### CI/CD
 
-```
-planner/
-├── src/
-│   ├── components/
-│   │   ├── layout/          # TopNav, layout components
-│   │   ├── ui/              # Reusable UI primitives (Button, Badge, Input, ColorPicker)
-│   │   └── views/           # Main views (RoadmapView, TechnicalView, AllocationView)
-│   ├── models/              # Data structures (Plan, Projects, Allocations, Preferences)
-│   ├── utils/               # Helpers (date calculations, capacity tracking)
-│   └── main.rs
-├── assets/
-│   └── styling/             # CSS files (theme.css, main.css)
-├── docs/
-│   ├── roadmap.md           # Development roadmap and milestones
-│   ├── ui-design.md         # Design system specification
-│   ├── component-reference.md
-│   ├── state-management.md
-│   ├── grid-architecture.md
-│   └── adrs/                # Architecture Decision Records
-└── .githooks/               # Git hooks for quality checks
-```
+The project uses GitHub Actions:
+- **Core tests**: Run on Linux (fast, cheap)
+- **App builds**: Run on macOS (required for desktop)
+- **Web deployment**: Automatic to GitHub Pages on main branch
 
 ## Documentation
 
+- **[Roadmap](docs/roadmap.md)**: Development plan and milestones
 - **[UI Design](docs/ui-design.md)**: Design tokens, component specifications
-- **[Component Reference](docs/component-reference.md)**: Implementation examples
 - **[State Management](docs/state-management.md)**: Dioxus Signals patterns
 - **[Grid Architecture](docs/grid-architecture.md)**: Allocation grid implementation
 - **[ADRs](docs/adrs/)**: Architecture Decision Records
-- **[Roadmap](docs/roadmap.md)**: Development plan and milestones
+
+## Tech Stack
+
+- **Rust** (stable)
+- **Dioxus 0.7** (reactive UI framework)
+- **WebAssembly** (primary web target)
+- **Desktop** support via Dioxus desktop feature (macOS)
 
 ## License
 

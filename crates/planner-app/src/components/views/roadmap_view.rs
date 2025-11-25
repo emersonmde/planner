@@ -124,23 +124,50 @@ pub fn RoadmapView() -> Element {
                 }
             }
 
-            // Roadmap projects table
-            DataTable {
-                TableHeader {
-                    TableHeaderCell { "Project Name" }
-                    TableHeaderCell { "Eng Est." }
-                    TableHeaderCell { "Sci Est." }
-                    TableHeaderCell { "Total Est." }
-                    TableHeaderCell { "Eng Alloc." }
-                    TableHeaderCell { "Sci Alloc." }
-                    TableHeaderCell { "Total Alloc." }
-                    TableHeaderCell { "Start Date" }
-                    TableHeaderCell { "Launch Date" }
-                    TableHeaderCell { "Notes" }
+            // Empty state when no roadmap projects
+            if plan_data.roadmap_projects.is_empty() {
+                div { class: "empty-state",
+                    div { class: "empty-state-icon", "📋" }
+                    h3 { class: "empty-state-title", "No Roadmap Projects" }
+                    p { class: "empty-state-description",
+                        "Create a roadmap project to begin planning your quarter."
+                    }
+                    Button {
+                        variant: ButtonVariant::Primary,
+                        onclick: move |_| {
+                            modal_mode.set(ModalMode::Add);
+                            modal_initial_name.set(String::new());
+                            modal_initial_eng_estimate.set(0.0);
+                            modal_initial_sci_estimate.set(0.0);
+                            modal_initial_start_date.set(plan_data.quarter_start_date);
+                            modal_initial_launch_date.set(plan_data.quarter_start_date + chrono::Duration::weeks(plan_data.num_weeks as i64));
+                            modal_initial_color.set(ProjectColor::Blue);
+                            modal_initial_notes.set(String::new());
+                            modal_visible.set(true);
+                        },
+                        "+ Create Roadmap Project"
+                    }
                 }
+            }
 
-                // Table rows
-                for project in filtered_projects {
+            // Roadmap projects table
+            if !plan_data.roadmap_projects.is_empty() {
+                DataTable {
+                    TableHeader {
+                        TableHeaderCell { "Project Name" }
+                        TableHeaderCell { "Eng Est." }
+                        TableHeaderCell { "Sci Est." }
+                        TableHeaderCell { "Total Est." }
+                        TableHeaderCell { "Eng Alloc." }
+                        TableHeaderCell { "Sci Alloc." }
+                        TableHeaderCell { "Total Alloc." }
+                        TableHeaderCell { "Start Date" }
+                        TableHeaderCell { "Launch Date" }
+                        TableHeaderCell { "Notes" }
+                    }
+
+                    // Table rows
+                    for project in filtered_projects {
                     {
                         let get_role = |member_id: &uuid::Uuid| {
                             prefs_data.team_members.iter()
@@ -293,6 +320,7 @@ pub fn RoadmapView() -> Element {
                             }
                         }
                     }
+                }
                 }
             }
 

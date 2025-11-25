@@ -296,23 +296,50 @@ pub fn TechnicalView() -> Element {
                     }
                 }
 
-                // Technical Projects table
-                DataTable {
-                    TableHeader {
-                        TableHeaderCell { "Project Name" }
-                        TableHeaderCell { "Roadmap" }
-                        TableHeaderCell { "Eng Est." }
-                        TableHeaderCell { "Sci Est." }
-                        TableHeaderCell { "Total Est." }
-                        TableHeaderCell { "Eng Alloc." }
-                        TableHeaderCell { "Sci Alloc." }
-                        TableHeaderCell { "Total Alloc." }
-                        TableHeaderCell { "Team" }
-                        TableHeaderCell { "Start" }
-                        TableHeaderCell { "End" }
+                // Empty state when no technical projects
+                if plan_data.technical_projects.is_empty() {
+                    div { class: "empty-state",
+                        div { class: "empty-state-icon", "🔧" }
+                        h3 { class: "empty-state-title", "No Technical Projects" }
+                        p { class: "empty-state-description",
+                            "Create technical projects to track implementation work."
+                        }
+                        Button {
+                            variant: ButtonVariant::Primary,
+                            onclick: move |_| {
+                                modal_mode.set(TechnicalModalMode::Add);
+                                modal_initial_name.set(String::new());
+                                modal_initial_roadmap_id.set(None);
+                                modal_initial_eng_estimate.set(0.0);
+                                modal_initial_sci_estimate.set(0.0);
+                                modal_initial_start_date.set(plan_data.quarter_start_date);
+                                modal_initial_completion.set(None);
+                                modal_initial_notes.set(String::new());
+                                modal_visible.set(true);
+                            },
+                            "+ Create Technical Project"
+                        }
                     }
+                }
 
-                    for project in filtered_projects {
+                // Technical Projects table
+                if !plan_data.technical_projects.is_empty() {
+                    DataTable {
+                        TableHeader {
+                            TableHeaderCell { "Project Name" }
+                            TableHeaderCell { "Roadmap" }
+                            TableHeaderCell { "Eng Est." }
+                            TableHeaderCell { "Sci Est." }
+                            TableHeaderCell { "Total Est." }
+                            TableHeaderCell { "Eng Alloc." }
+                            TableHeaderCell { "Sci Alloc." }
+                            TableHeaderCell { "Total Alloc." }
+                            TableHeaderCell { "Team" }
+                            TableHeaderCell { "Start" }
+                            TableHeaderCell { "End" }
+                        }
+
+                        for project in filtered_projects {
                         {
                             // Get role lookup function
                             let get_role = |member_id: &Uuid| {
@@ -523,6 +550,7 @@ pub fn TechnicalView() -> Element {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }

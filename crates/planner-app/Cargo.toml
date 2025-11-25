@@ -1,9 +1,11 @@
 [package]
 name = "planner-app"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Matthew Emerson <emersonmde@protonmail.com>"]
 edition = "2021"
 description = "Quarterly Planner - Dioxus application"
+license = "MIT"
+repository = "https://github.com/emersonmde/planner"
 
 [dependencies]
 planner-core = { path = "../planner-core" }

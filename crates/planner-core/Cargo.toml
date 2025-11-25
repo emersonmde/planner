@@ -1,8 +1,10 @@
 [package]
 name = "planner-core"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 description = "Core models and utilities for the Quarterly Planner"
+license = "MIT"
+repository = "https://github.com/emersonmde/planner"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }

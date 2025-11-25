@@ -188,31 +188,31 @@ With workspace restructure complete, we can test `planner-core` on any platform.
 
 **Goal:** Prepare and publish v1.0 release
 
-**Status:** 📋 Not Started
-**Estimated Effort:** 1 day
+**Status:** 🔄 In Progress (release artifacts pending)
+**Completed:** Version bump, README, empty states
 
 ### Tasks
 
-#### 16.1: Version & Documentation
+#### 16.1: Version & Documentation ✅
 - Update `Cargo.toml` version to 1.0.0
-- Update README with current features and screenshots
+- Update README with current features and workspace structure
 - Ensure all docs reflect current state
 
-#### 16.2: Empty States
-- No team members: "Add your first team member to get started"
-- No projects: "Create a roadmap project to begin planning"
-- No allocations: "Use paintbrush mode to allocate work"
+#### 16.2: Empty States ✅
+- Team members: "No Team Members - Add team members to start planning allocations"
+- Roadmap projects: "No Roadmap Projects - Create a roadmap project to begin planning your quarter"
+- Technical projects: "No Technical Projects - Create technical projects to track implementation work"
 
-#### 16.3: Release Artifacts
-- Tag git commit: `v1.0.0`
-- Build web bundle and verify GH Pages deployment
-- Build macOS desktop binary
-- Create GitHub release with changelog
+#### 16.3: Release Artifacts (Manual Steps)
+- [ ] Tag git commit: `v1.0.0`
+- [ ] Build web bundle and verify GH Pages deployment
+- [ ] Build macOS desktop binary
+- [ ] Create GitHub release with changelog
 
 ### Acceptance Criteria
-- [ ] Version 1.0.0 in Cargo.toml
-- [ ] README is up-to-date
-- [ ] Empty states provide helpful guidance
+- [x] Version 1.0.0 in Cargo.toml
+- [x] README is up-to-date
+- [x] Empty states provide helpful guidance
 - [ ] GH Pages deployment working
 - [ ] GitHub release published with macOS binary
 
