@@ -4,9 +4,9 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 
 ## Progress Status
 
-**Current Status:** Milestone 12 Complete (12 of 17 milestones)
+**Current Status:** Milestone 12.5 Complete (Settings & Configuration)
 
-- ✅ Milestones 1-12 Complete (see summary below)
+- ✅ Milestones 1-12.5 Complete (see summary below)
 - 📋 **Milestones 13-17**: Planned for v1.0
 
 **Build Status:** ✅ Compiles successfully

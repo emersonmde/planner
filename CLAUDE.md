@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Quarterly Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and file-based persistence.
+Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and localStorage persistence.
 
-**Status:** Milestone 12 Complete (Team Members CRUD). The app now uses a two-signal architecture (Preferences + PlanState) for better reactivity and localStorage persistence. Full CRUD operations for roadmap projects, technical projects, and team members with modal-based editing, inline validation, and cascade behavior. Includes interactive allocation grid, paintbrush mode, tooltips, and self-contained export format ready for M13. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
+**Status:** Milestone 12.5 Complete (Settings & Configuration). The app now uses a two-signal architecture (Preferences + PlanState) with full localStorage persistence for both. Full CRUD operations for roadmap projects, technical projects, and team members with modal-based editing, inline validation, and cascade behavior. Settings modal provides plan configuration (name, start date, weeks), sprint configuration (anchor date, length), and storage management (load sample data, clear preferences). Dynamic capacity indicator with color-coded utilization thresholds. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
 
 ## Development Commands
 
@@ -109,12 +109,12 @@ The application uses a comprehensive design token system defined in `assets/styl
 
 ### State Management
 
-**Current (M9+)**: Two-signal architecture for improved reactivity and persistence
-- `use_preferences()`: Team roster, sprint config (persisted to localStorage)
-- `use_plan_state()`: Projects, allocations (exported/imported per quarter)
+**Current (M12.5+)**: Two-signal architecture for improved reactivity and persistence
+- `use_preferences()`: Team roster, sprint config, default capacity (persisted to localStorage)
+- `use_plan_state()`: Projects, allocations, quarter config (persisted to localStorage)
 - `PlanExport`: Self-contained format for sharing and future multi-team aggregation (M13)
 
-State updates trigger reactive UI updates via Dioxus signals.
+Both signals auto-save to localStorage on change via `use_effect`. State updates trigger reactive UI updates via Dioxus signals.
 
 ### Component Patterns
 
@@ -152,7 +152,8 @@ ADRs document major design decisions and their rationale. Located in `docs/adrs/
 - **`ADR-001-design-system-structure.md`**: Why CSS design tokens, module organization, dark-mode-first approach
 - **`ADR-002-state-management.md`**: Why Dioxus Signals over Redux/multiple signals, alternatives considered
 - **`ADR-003-grid-layout.md`**: Why horizontal timeline, CSS Grid choice, sticky header strategy, performance considerations
-- **`ADR-004-state-persistence.md`**: Two-signal architecture, localStorage persistence strategy, self-contained export format
+- **`ADR-004-dark-mode-design-principles.md`**: Dark mode color system, contrast ratios, semantic color usage
+- **`ADR-005-state-persistence.md`**: Two-signal architecture, three-tier localStorage persistence, self-contained export format
 
 ### Future Documentation
 These will be created in upcoming milestones:
@@ -172,7 +173,7 @@ The project follows a structured milestone approach toward v1.0 release. **Never
 4. Manual testing
 5. Documentation updates
 
-**Current Status:** Milestone 12 Complete (Team Members CRUD)
+**Current Status:** Milestone 12.5 Complete (Settings & Configuration)
 **Next Milestone:** Milestone 13 - Import/Export Plan State
 
 **v1.0 Goals** (M9-M17):
@@ -205,11 +206,12 @@ The application manages:
 - **Allocation**: week_start, team_member_id, assignments (project_id + percentage) - stored in PlanState
 - **ProjectColor**: enum for visual differentiation (9 colors)
 
-**Current (M8)**: Single `Plan` struct with all data
-**Planned (M9)**: Split into `Preferences` (localStorage) and `PlanState` (exported/imported)
-**Export Format (M9+)**: `PlanExport` - self-contained JSON including team snapshot for portability
+**Current Architecture (M12.5+)**:
+- `Preferences`: Team members, sprint config, default capacity - persisted to localStorage
+- `PlanState`: Projects, allocations, quarter config (name, start date, weeks) - persisted to localStorage
+- `PlanExport` (M13): Self-contained JSON including team snapshot for portability and sharing
 
-File format: See `docs/roadmap.md` Milestone 9 for data model refactor details
+See `docs/roadmap.md` for data model details and M13 import/export specifications.
 
 ## Dioxus 0.7 Patterns
 

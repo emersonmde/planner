@@ -1,8 +1,8 @@
-# ADR-004: State Architecture, Persistence, and Export Format
+# ADR-005: State Architecture, Persistence, and Export Format
 
-**Status**: Accepted
+**Status**: Accepted (Updated)
 
-**Date**: 2025-01-23
+**Date**: 2025-01-23 (Updated: 2025-11-25)
 
 **Decision Makers**: Matthew Emerson, Claude Code
 
@@ -165,60 +165,97 @@ impl PlanExport {
 }
 ```
 
-### 3. Two-Tier Persistence Strategy
+### 3. Three-Tier Persistence Strategy
 
 **Tier 1: Preferences (localStorage)**
 - **Storage**: Browser localStorage (key: `"planner_preferences"`)
-- **Trigger**: Auto-save on change (debounced 1 second)
+- **Trigger**: Auto-save on change via `use_effect`
 - **Lifetime**: Persists across sessions, browser refreshes
-- **Migration**: First-time users get default values
+- **Migration**: First-time users get smart defaults (next quarter based on current date)
 
 ```rust
 use_effect(move || {
     let prefs = preferences();
-    save_to_localstorage("planner_preferences", &prefs);
+    let _ = storage::save_preferences(&prefs);
 });
 ```
 
-**Tier 2: Plan State (export/import)**
+**Tier 2: Plan State (localStorage - Working Copy)**
+- **Storage**: Browser localStorage (key: `"planner_plan_state"`)
+- **Trigger**: Auto-save on change via `use_effect`
+- **Lifetime**: Persists across sessions as "working copy"
+- **Purpose**: Prevents data loss during planning sessions
+- **Migration**: First-time users get smart defaults (next quarter name/date)
+
+```rust
+use_effect(move || {
+    let state = plan_state();
+    let _ = storage::save_plan_state(&state);
+});
+```
+
+**Tier 3: Plan Export (file/clipboard - Sharing & Archiving)**
 - **Storage**: JSON files (manual export) OR base64 clipboard (copy/paste)
-- **Trigger**: User-initiated (File → Export/Import)
-- **Lifetime**: Per quarter, user-managed (versioned, archived)
-- **Format**: Self-contained `PlanExport` struct
+- **Trigger**: User-initiated (Settings → Export/Import, planned for M13)
+- **Lifetime**: Per quarter, user-managed (versioned, archived, shareable)
+- **Format**: Self-contained `PlanExport` struct (includes team snapshot)
+
+> **Design Decision (M12.5)**: We added localStorage persistence for PlanState to prevent accidental data loss. Users were losing planning work when refreshing the browser. The export/import feature (M13) remains for intentional sharing and archiving, while localStorage serves as the automatic "working copy."
 
 ### 4. Storage Implementation
 
-**For Preferences (localStorage)**:
+**Actual Implementation (M12.5)**: Direct platform APIs without abstraction layer
 
-**Chosen Approach**: `dioxus-sdk` storage (v0.7) with abstraction layer
-
-**Storage Abstraction**:
+**Web (WASM)**: `web_sys::Storage` via localStorage
 ```rust
 // src/storage/mod.rs
-pub trait PreferencesStorage {
-    fn save(&self, key: &str, prefs: &Preferences) -> Result<(), StorageError>;
-    fn load(&self, key: &str) -> Result<Option<Preferences>, StorageError>;
+#[cfg(target_family = "wasm")]
+const PREFERENCES_KEY: &str = "planner_preferences";
+#[cfg(target_family = "wasm")]
+const PLAN_STATE_KEY: &str = "planner_plan_state";
+
+#[cfg(target_family = "wasm")]
+pub fn save_preferences(prefs: &Preferences) -> Result<(), String> {
+    let window = web_sys::window().ok_or("No window")?;
+    let storage = window.local_storage()?.ok_or("No localStorage")?;
+    let json = serde_json::to_string(prefs)?;
+    storage.set_item(PREFERENCES_KEY, &json)?;
+    Ok(())
 }
 
-#[cfg(feature = "web")]
-pub fn create_storage() -> Box<dyn PreferencesStorage> {
-    Box::new(DioxusStorage::new())
-}
-
-#[cfg(feature = "desktop")]
-pub fn create_storage() -> Box<dyn PreferencesStorage> {
-    Box::new(DioxusStorage::new()) // Same API, different backend
+#[cfg(target_family = "wasm")]
+pub fn load_preferences() -> Option<Preferences> {
+    let window = web_sys::window()?;
+    let storage = window.local_storage().ok()??;
+    let json = storage.get_item(PREFERENCES_KEY).ok()??;
+    serde_json::from_str(&json).ok()
 }
 ```
 
-**Rationale**:
-- `dioxus-sdk` 0.7 provides localStorage for web and file-based storage for desktop
-- Abstraction layer allows easy pivot if dioxus-sdk proves problematic
-- Maintains web/desktop parity (both platforms work through same API)
+**Desktop (Native)**: `dirs` crate + file-based JSON storage
+```rust
+#[cfg(not(target_family = "wasm"))]
+fn get_storage_dir() -> Option<PathBuf> {
+    dirs::data_local_dir().map(|p| p.join("planner"))
+}
 
-**Fallback Plan** (if dioxus-sdk issues arise):
-- Web: Use `gloo-storage` (proven, well-documented)
-- Desktop: Use `directories` crate + `serde_json` file I/O
+#[cfg(not(target_family = "wasm"))]
+pub fn save_preferences(prefs: &Preferences) -> Result<(), String> {
+    let dir = get_storage_dir().ok_or("No data directory")?;
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("preferences.json");
+    let json = serde_json::to_string_pretty(prefs)?;
+    std::fs::write(path, json)?;
+    Ok(())
+}
+```
+
+**Rationale for Direct Implementation**:
+- `dioxus-sdk` storage had compatibility issues with Dioxus 0.7
+- Direct `web_sys` is lightweight (already a dependency) and well-documented
+- `dirs` crate provides cross-platform data directory paths
+- No abstraction layer needed - conditional compilation (`#[cfg]`) is sufficient
+- Simpler code, fewer dependencies, easier to debug
 
 **For Plan Export**:
 - Serialization format: **JSON for v1.0** (human-readable, debuggable)
@@ -241,6 +278,33 @@ pub trait PlanSerializer {
 
 **File naming**: `plan-{team_name}-{quarter}-{date}.json`
 
+### 5. Settings Modal UI (M12.5)
+
+The Settings Modal provides user access to configuration and storage management:
+
+**Plan Configuration Section**:
+- Plan Name (e.g., "Q1 2025", "H1 2025")
+- Start Date (date picker)
+- Number of Weeks (1-52)
+
+**Sprint Configuration Section**:
+- Sprint Anchor Date (known sprint start for alignment)
+- Sprint Length (1-4 weeks)
+
+**Storage Section**:
+- **Load Sample Data**: Populates demo data for testing/onboarding
+- **Clear Preferences**: Resets team members, sprint config to defaults (with confirmation)
+
+**Validation**:
+- Inline validation for date formats (YYYY-MM-DD)
+- Range validation for weeks/sprint length
+- Single "Apply" button validates all sections before saving
+
+**Smart Defaults**:
+- First-time users get next quarter based on current date
+- Quarter start date is actual first day (Jan 1, Apr 1, Jul 1, Oct 1)
+- Default sprint anchor aligns with quarter start
+
 ---
 
 ## Consequences
@@ -249,9 +313,12 @@ pub trait PlanSerializer {
 
 ✅ **Isolated Reactivity**: Team changes only trigger components reading `preferences`, not those reading `plan_state`
 
-✅ **Natural Persistence Model**: Two-tier storage aligns with business requirements:
-- Team config persists between quarters (localStorage)
-- Plans are exported per quarter (shareable, versionable)
+✅ **No Data Loss (M12.5)**: Both signals auto-save to localStorage, preventing accidental data loss from browser refresh or navigation
+
+✅ **Natural Persistence Model**: Three-tier storage aligns with business requirements:
+- Team config persists between quarters (localStorage - Tier 1)
+- Plan state persists as working copy (localStorage - Tier 2)
+- Plans exported for sharing/archiving (file export - Tier 3, M13)
 
 ✅ **Portable Exports**: Self-contained format enables:
 - **1.0 Sharing**: Alice exports → Bob imports and sees all team member names/roles correctly
@@ -464,7 +531,13 @@ let allocations = use_signal(|| AllocationState { allocations, metadata });
   - Confirmed `dioxus-sdk` storage with abstraction layer
   - JSON serialization for v1.0, binary format may be added if implementation is simple
   - Storage abstraction enables web/desktop parity and easy library pivoting
-- **Future**: Update if v2.0 multi-team implementation reveals issues
+- **2025-11-25**: Updated after M12.5 implementation - Renumbered to ADR-005
+  - Changed from two-tier to three-tier persistence (added localStorage for PlanState)
+  - Replaced `dioxus-sdk` with direct `web_sys::Storage` (WASM) and `dirs` crate (native)
+  - Added Settings Modal UI section documenting configuration interface
+  - Updated code examples to match actual implementation
+  - Documented smart defaults (next quarter based on current date)
+- **Future**: Update after M13 import/export implementation
 
 ---
 
