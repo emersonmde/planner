@@ -5,16 +5,15 @@ use dioxus::prelude::*;
 
 use components::layout::View;
 use components::{AllocationView, RoadmapView, TechnicalView, TopNav};
-use models::PlanExport;
+use planner::models::{self, PlanExport};
+use planner::utils;
 use state::AppContext;
 
-/// Define a components module that contains all shared components for our app.
+/// Platform-specific modules (not in library due to GUI dependencies)
 mod components;
-mod models;
 mod plan_io;
 mod state;
 mod storage;
-mod utils;
 
 /// Check URL for plan data query parameter (?plan=<base64>)
 /// Returns (preferences, plan_state, viewing_session) if found and valid

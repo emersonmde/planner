@@ -1,17 +1,7 @@
 use dioxus::prelude::*;
 
-/// Badge type indicating status
-/// Reference: docs/component-reference.md section 2
-#[derive(Clone, Copy, PartialEq)]
-pub enum BadgeType {
-    Success,
-    Warning,
-    Error,
-    #[allow(dead_code)] // Reserved for informational badges in future UI
-    Info,
-    /// Neutral state - no status indication (e.g., 0/0 allocation)
-    Neutral,
-}
+// Re-export BadgeType from models for use by components
+pub use planner::models::BadgeType;
 
 #[component]
 pub fn Badge(

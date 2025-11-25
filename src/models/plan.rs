@@ -497,8 +497,8 @@ impl Plan {
 /// Success: within 5% (±0.5 weeks per 10 weeks)
 /// Warning: 5-25% off, or allocated without estimate
 /// Error: >25% off
-pub fn get_capacity_status(allocated: f32, estimated: f32) -> crate::components::BadgeType {
-    use crate::components::BadgeType;
+pub fn get_capacity_status(allocated: f32, estimated: f32) -> super::BadgeType {
+    use super::BadgeType;
 
     // Handle zero estimate cases
     if estimated == 0.0 {

@@ -20,9 +20,11 @@ mod plan;
 mod plan_export;
 mod plan_state;
 mod preferences;
+mod status;
 
 pub use plan::*;
 #[allow(unused_imports)] // Used in M13+ for plan export/import
 pub use plan_export::*;
 pub use plan_state::*;
 pub use preferences::*;
+pub use status::*;
