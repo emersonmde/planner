@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Planner is a Dioxus 0.7 web/desktop application for engineering managers to plan quarterly resource allocation. The app features three main views (Roadmap, Technical Projects, Allocation Grid) with an interactive weekly allocation grid, capacity tracking, and localStorage persistence.
 
-**Status:** Milestone 12.5 Complete (Settings & Configuration). The app now uses a two-signal architecture (Preferences + PlanState) with full localStorage persistence for both. Full CRUD operations for roadmap projects, technical projects, and team members with modal-based editing, inline validation, and cascade behavior. Settings modal provides plan configuration (name, start date, weeks), sprint configuration (anchor date, length), and storage management (load sample data, clear preferences). Dynamic capacity indicator with color-coded utilization thresholds. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
+**Status:** Milestone 13 Complete (Plan Import/Export). The app features a "Plan Menu" (Notion/Linear-style) for file operations: Open, Save, Copy/Paste to clipboard, with keyboard shortcuts (⌘O, ⌘S). Viewing mode displays imported plans with unsaved changes detection. Two-signal architecture (Preferences + PlanState) with localStorage persistence. Full CRUD operations for all entities. See `docs/roadmap.md` for the complete v1.0 roadmap (17 milestones).
 
 ## Development Commands
 
@@ -88,10 +88,13 @@ All CI checks mirror the pre-commit hook to ensure consistency.
 ```
 src/
 ├── components/
-│   ├── layout/      # TopNav, future: SidePanel
-│   ├── ui/          # Reusable UI primitives (Button, Badge, Input)
+│   ├── layout/      # TopNav (with sub-components: PlanMenu, ViewTabs, CapacityIndicator)
+│   ├── ui/          # Reusable UI primitives (Button, Badge, Input, Modals)
 │   └── views/       # Main view components (RoadmapView, TechnicalView, AllocationView)
-├── models/          # Data structures (Plan, TeamMember, Projects, Allocations)
+├── models/          # Data structures (Plan, TeamMember, Projects, Allocations, PlanExport)
+├── plan_io.rs       # Platform-specific file I/O (download, clipboard, file reading)
+├── state.rs         # App state management (signals, context, ViewingSession)
+├── storage.rs       # localStorage persistence (preferences, plan state)
 └── utils/           # Helper functions (date calculations, capacity tracking)
 ```
 
@@ -157,7 +160,6 @@ ADRs document major design decisions and their rationale. Located in `docs/adrs/
 
 ### Future Documentation
 These will be created in upcoming milestones:
-- **M13**: `docs/file-format.md` - PlanExport JSON schema and import/export specifications
 - **M14**: `docs/validation.md` - Validation rules, error messages, and user feedback patterns
 - **M16**: `docs/testing.md` - Testing strategy, coverage goals, and accessibility testing
 - **M17**: `docs/user-guide.md` - End-user documentation with workflows and keyboard shortcuts
@@ -173,8 +175,8 @@ The project follows a structured milestone approach toward v1.0 release. **Never
 4. Manual testing
 5. Documentation updates
 
-**Current Status:** Milestone 12.5 Complete (Settings & Configuration)
-**Next Milestone:** Milestone 13 - Import/Export Plan State
+**Current Status:** Milestone 13 Complete (Plan Import/Export)
+**Next Milestone:** Milestone 14 - Undo/Redo System
 
 **v1.0 Goals** (M9-M17):
 - Two-signal state architecture (preferences + plan_state)
