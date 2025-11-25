@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::components::ui::{Button, ButtonVariant};
+
 /// Represents the different views in the application
 #[derive(Clone, Copy, PartialEq)]
 pub enum View {
@@ -11,7 +13,10 @@ pub enum View {
 /// Top navigation component with view tabs, quarter selector, and capacity indicator
 /// Reference: docs/ui-design.md section 5.1, docs/mockup.html lines 1017-1054
 #[component]
-pub fn TopNav(active_view: Signal<View>) -> Element {
+pub fn TopNav(
+    active_view: Signal<View>,
+    #[props(default)] on_add_team_member: EventHandler<()>,
+) -> Element {
     rsx! {
         nav { class: "top-nav",
             // App title with icon
@@ -66,6 +71,13 @@ pub fn TopNav(active_view: Signal<View>) -> Element {
                         style: "width: 87%"
                     }
                 }
+            }
+
+            // Add Team Member button
+            Button {
+                variant: ButtonVariant::Secondary,
+                onclick: move |_| on_add_team_member.call(()),
+                "+ Add Member"
             }
 
             // File menu button

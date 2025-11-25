@@ -2291,3 +2291,125 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
   }
 }
+
+/* ========== Team Member Modal ========== */
+.team-member-modal {
+  width: 420px;
+}
+
+/* Role Selector (radio buttons styled as cards) */
+.role-selector {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.role-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-quick);
+}
+
+.role-option:hover {
+  border-color: var(--border-emphasis);
+  background: var(--bg-secondary);
+}
+
+.role-option.selected {
+  border-color: var(--primary-50);
+  background: color-mix(in srgb, var(--primary-50) 10%, var(--bg-secondary));
+}
+
+.role-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-default);
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-quick);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.role-option input[type="radio"]:checked {
+  border-color: var(--primary-50);
+  background: var(--primary-50);
+}
+
+.role-option input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+}
+
+.role-label {
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Form Warning Message */
+.form-warning {
+  font-size: var(--font-size-caption);
+  color: var(--warning-50);
+  background: var(--warning-bg);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--warning-50);
+  margin-top: var(--space-sm);
+  line-height: 1.4;
+}
+
+/* Engineer Header with edit/delete actions */
+.grid-engineer-header {
+  cursor: pointer;
+  position: relative;
+}
+
+.grid-engineer-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.grid-engineer-header.over-allocated:hover {
+  background: color-mix(in srgb, var(--error-50) 12%, var(--bg-secondary));
+}
+
+.engineer-header-actions {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
+  display: flex;
+  gap: var(--space-xs);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-quick);
+}
+
+.grid-engineer-header:hover .engineer-header-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+.engineer-header-actions .icon-button {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  font-size: 12px;
+  padding: 2px;
+}

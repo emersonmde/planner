@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 
 use crate::components::ui::{
-    AssignProjectModal, ContextMenu, FloatingFab, FloatingProjectPanel, GridCell,
-    KeybindingsOverlay, SplitAllocationModal,
+    AssignProjectModal, ConfirmationDialog, ContextMenu, FloatingFab, FloatingProjectPanel,
+    GridCell, KeybindingsOverlay, SplitAllocationModal, TeamMemberModal, TeamMemberModalMode,
 };
-use crate::models::{Allocation, Assignment};
+use crate::models::{Allocation, Assignment, TeamMember};
 use crate::state::{use_plan_state, use_preferences};
 use crate::utils::generate_quarter_weeks;
 
@@ -18,7 +18,7 @@ use super::paintbrush::{allocate_project_to_cell, SelectedProject};
 pub fn AllocationView() -> Element {
     // Two-signal architecture (M9)
     let mut plan_state = use_plan_state();
-    let preferences = use_preferences();
+    let mut preferences = use_preferences();
 
     let plan_data = plan_state();
     let prefs_data = preferences();
@@ -60,6 +60,12 @@ pub fn AllocationView() -> Element {
     // Clipboard state and focused cell for hover-based copy/paste
     let mut clipboard = use_signal(|| None::<Vec<Assignment>>);
     let mut focused_cell = use_signal(|| None::<(uuid::Uuid, chrono::NaiveDate)>);
+
+    // Team member edit/delete state
+    let mut show_team_member_modal = use_signal(|| false);
+    let mut editing_member_id = use_signal(|| None::<uuid::Uuid>);
+    let mut show_delete_confirmation = use_signal(|| false);
+    let mut deleting_member_id = use_signal(|| None::<uuid::Uuid>);
 
     // Generate weeks for the quarter using memo
     let weeks = use_memo(move || {
@@ -630,6 +636,8 @@ pub fn AllocationView() -> Element {
                     for engineer in &prefs_data.team_members {
                         {
                             let engineer_id = engineer.id;
+                            let engineer_name = engineer.name.clone();
+                            let engineer_role = engineer.role;
                             let allocated = plan_data.calculate_team_member_allocated_weeks(&engineer_id);
                             let capacity = engineer.capacity;
                             let diff = (allocated - capacity).abs();
@@ -652,10 +660,40 @@ pub fn AllocationView() -> Element {
                             };
 
                             rsx! {
-                                div { class: "{header_class}",
+                                div {
+                                    class: "{header_class}",
+                                    onclick: move |e| {
+                                        // Only trigger edit if not clicking on action buttons
+                                        e.stop_propagation();
+                                        editing_member_id.set(Some(engineer_id));
+                                        show_team_member_modal.set(true);
+                                    },
+                                    // Edit/Delete action buttons (show on hover)
+                                    div { class: "engineer-header-actions",
+                                        button {
+                                            class: "icon-button",
+                                            title: "Edit team member",
+                                            onclick: move |e| {
+                                                e.stop_propagation();
+                                                editing_member_id.set(Some(engineer_id));
+                                                show_team_member_modal.set(true);
+                                            },
+                                            "✏️"
+                                        }
+                                        button {
+                                            class: "icon-button danger",
+                                            title: "Delete team member",
+                                            onclick: move |e| {
+                                                e.stop_propagation();
+                                                deleting_member_id.set(Some(engineer_id));
+                                                show_delete_confirmation.set(true);
+                                            },
+                                            "🗑️"
+                                        }
+                                    }
                                     div { class: "engineer-name-row",
-                                        span { class: "engineer-name", "{engineer.name}" }
-                                        span { class: "role-badge", "{engineer.role.short_name()}" }
+                                        span { class: "engineer-name", "{engineer_name}" }
+                                        span { class: "role-badge", "{engineer_role.short_name()}" }
                                     }
                                     div { class: "capacity-row",
                                         span {
@@ -842,6 +880,114 @@ pub fn AllocationView() -> Element {
             KeybindingsOverlay {
                 visible: keybindings_visible(),
                 on_close: move |_| keybindings_visible.set(false),
+            }
+
+            // Team Member Edit Modal
+            if show_team_member_modal() {
+                if let Some(member_id) = editing_member_id() {
+                    if let Some(member) = prefs_data.team_members.iter().find(|m| m.id == member_id) {
+                        {
+                            let member_name = member.name.clone();
+                            let member_role = member.role;
+                            let member_capacity = member.capacity;
+                            let member_allocated = plan_data.calculate_team_member_allocated_weeks(&member_id);
+
+                            rsx! {
+                                TeamMemberModal {
+                                    mode: TeamMemberModalMode::Edit(member_id),
+                                    initial_name: member_name,
+                                    initial_role: member_role,
+                                    initial_capacity: member_capacity,
+                                    default_capacity: prefs_data.default_capacity,
+                                    allocated_weeks: member_allocated,
+                                    on_save: move |updated_member: TeamMember| {
+                                        preferences.with_mut(|p| {
+                                            if let Some(existing) = p.team_members.iter_mut().find(|m| m.id == member_id) {
+                                                existing.name = updated_member.name;
+                                                existing.role = updated_member.role;
+                                                existing.capacity = updated_member.capacity;
+                                            }
+                                        });
+                                        show_team_member_modal.set(false);
+                                        editing_member_id.set(None);
+                                    },
+                                    on_cancel: move |_| {
+                                        show_team_member_modal.set(false);
+                                        editing_member_id.set(None);
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Delete Team Member Confirmation Dialog
+            if show_delete_confirmation() {
+                if let Some(member_id) = deleting_member_id() {
+                    if let Some(member) = prefs_data.team_members.iter().find(|m| m.id == member_id) {
+                        {
+                            let member_name = member.name.clone();
+                            let member_allocated = plan_data.calculate_team_member_allocated_weeks(&member_id);
+
+                            // Get list of projects assigned to this member
+                            let assigned_projects: Vec<String> = plan_data.allocations
+                                .iter()
+                                .filter(|a| a.team_member_id == member_id)
+                                .flat_map(|a| &a.assignments)
+                                .filter_map(|assignment| {
+                                    plan_data.technical_projects
+                                        .iter()
+                                        .find(|p| p.id == assignment.technical_project_id)
+                                        .map(|p| p.name.clone())
+                                })
+                                .collect::<std::collections::HashSet<_>>()
+                                .into_iter()
+                                .collect();
+
+                            let warning_text = if member_allocated > 0.0 {
+                                format!(
+                                    "This will remove {:.1} weeks of allocations across {} project(s): {}",
+                                    member_allocated,
+                                    assigned_projects.len(),
+                                    if assigned_projects.is_empty() {
+                                        "none".to_string()
+                                    } else {
+                                        assigned_projects.join(", ")
+                                    }
+                                )
+                            } else {
+                                String::new()
+                            };
+
+                            rsx! {
+                                ConfirmationDialog {
+                                    visible: true,
+                                    title: "Delete Team Member".to_string(),
+                                    message: format!("Are you sure you want to delete {}?", member_name),
+                                    warning: warning_text,
+                                    confirm_label: "Delete".to_string(),
+                                    on_confirm: move |_| {
+                                        // Cascade delete: remove all allocations for this member
+                                        plan_state.with_mut(|p| {
+                                            p.allocations.retain(|a| a.team_member_id != member_id);
+                                        });
+                                        // Remove team member from preferences
+                                        preferences.with_mut(|p| {
+                                            p.team_members.retain(|m| m.id != member_id);
+                                        });
+                                        show_delete_confirmation.set(false);
+                                        deleting_member_id.set(None);
+                                    },
+                                    on_cancel: move |_| {
+                                        show_delete_confirmation.set(false);
+                                        deleting_member_id.set(None);
+                                    },
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

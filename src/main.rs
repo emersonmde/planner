@@ -3,7 +3,9 @@
 use dioxus::prelude::*;
 
 use components::layout::View;
+use components::ui::{TeamMemberModal, TeamMemberModalMode};
 use components::{AllocationView, RoadmapView, TechnicalView, TopNav};
+use models::Role;
 use state::{create_sample_plan, AppContext};
 
 /// Define a components module that contains all shared components for our app.
@@ -43,7 +45,7 @@ fn App() -> Element {
     };
 
     // Create two independent signals
-    let preferences = use_signal(|| initial_prefs);
+    let mut preferences = use_signal(|| initial_prefs);
     let plan_state = use_signal(|| initial_state);
 
     // Auto-save preferences to localStorage when they change
@@ -62,6 +64,30 @@ fn App() -> Element {
     // Active view state
     let active_view = use_signal(|| View::Allocation);
 
+    // Team member modal state
+    let mut show_team_member_modal = use_signal(|| false);
+
+    // Handle adding new team member
+    let handle_add_team_member = move |_| {
+        show_team_member_modal.set(true);
+    };
+
+    // Handle save team member
+    let handle_save_team_member = move |member: models::TeamMember| {
+        preferences.with_mut(|p| {
+            p.team_members.push(member);
+        });
+        show_team_member_modal.set(false);
+    };
+
+    // Handle cancel team member modal
+    let handle_cancel_team_member = move |_| {
+        show_team_member_modal.set(false);
+    };
+
+    // Get default capacity for new members
+    let default_capacity = preferences().default_capacity;
+
     rsx! {
         // Critical CSS to prevent white flash on load
         document::Style { "html, body {{ background-color: #0f0f11; }}" }
@@ -71,7 +97,10 @@ fn App() -> Element {
 
         div { class: "app-container",
             // Top navigation bar
-            TopNav { active_view }
+            TopNav {
+                active_view,
+                on_add_team_member: handle_add_team_member,
+            }
 
             // Main content area
             main { class: "main-content",
@@ -80,6 +109,20 @@ fn App() -> Element {
                     View::Roadmap => rsx! { RoadmapView {} },
                     View::Technical => rsx! { TechnicalView {} },
                     View::Allocation => rsx! { AllocationView {} },
+                }
+            }
+
+            // Team member modal (Add mode from TopNav)
+            if show_team_member_modal() {
+                TeamMemberModal {
+                    mode: TeamMemberModalMode::Add,
+                    initial_name: String::new(),
+                    initial_role: Role::Engineering,
+                    initial_capacity: 0.0,
+                    default_capacity,
+                    allocated_weeks: 0.0,
+                    on_save: handle_save_team_member,
+                    on_cancel: handle_cancel_team_member,
                 }
             }
         }

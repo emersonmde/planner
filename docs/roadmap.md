@@ -4,10 +4,10 @@ This roadmap outlines the path to v1.0 release. Completed milestones are summari
 
 ## Progress Status
 
-**Current Status:** Milestone 11 Complete (11 of 17 milestones)
+**Current Status:** Milestone 12 Complete (12 of 17 milestones)
 
-- ✅ Milestones 1-11 Complete (see summary below)
-- 📋 **Milestones 12-17**: Planned for v1.0
+- ✅ Milestones 1-12 Complete (see summary below)
+- 📋 **Milestones 13-17**: Planned for v1.0
 
 **Build Status:** ✅ Compiles successfully
 
@@ -65,7 +65,7 @@ Before marking any milestone as complete, the following steps must be completed:
 
 ---
 
-## Completed Milestones (1-11) - Summary
+## Completed Milestones (1-12) - Summary
 
 ### M1-4: Foundation & Core Views ✅
 - Dioxus 0.7 setup, design system (theme.css), component library
@@ -117,6 +117,15 @@ Before marking any milestone as complete, the following steps must be completed:
 - Inline validation for name and estimates
 - Delete with cascade behavior (removes all allocations)
 - Color inheritance from linked roadmap projects
+
+### M12: Team Members CRUD ✅
+- **Important**: Full CRUD for team members with "+ Add Member" button in TopNav
+- Modal-based editing with role selection (Engineer/Scientist radio buttons)
+- Click engineer header in allocation grid to edit
+- Edit/delete action buttons on hover (matching modern SaaS pattern)
+- Delete with cascade behavior (removes all allocations for that member)
+- Capacity validation with warning when reducing below allocated weeks
+- Changes persist to localStorage via preferences signal
 
 ---
 
@@ -210,7 +219,7 @@ plan_state.write().technical_projects.push(new_project);
 ## Milestone 12: Team Members Management (CRUD Operations)
 **Goal:** Enable adding, editing, and removing team members
 
-**Status:** 📋 Not Started
+**Status:** ✅ Complete
 **Estimated Effort:** 2 days
 
 ### Context
